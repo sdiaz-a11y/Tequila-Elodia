@@ -1,0 +1,70 @@
+{
+  "project": { "name": "ELODIA", "document": "Visual Identity Reference", "version": "1.0", "source": "Original product reference image", "category": "Premium Mexican Tequila" },
+  "brand": {
+    "official_name": "ELODIA",
+    "product_type": "Tequila Añejo",
+    "country": "Mexico",
+    "brand_personality": ["Luxurious", "Exclusive", "Elegant", "Sophisticated", "Traditional", "Ceremonial", "Prestigious"],
+    "visual_keywords": ["Black and gold", "Mexican heritage", "Premium craftsmanship", "Collector edition", "Timeless elegance", "Cinematic luxury"]
+  },
+  "color_palette": {
+    "primary": { "obsidian_black": "#0B0B0D", "charcoal_black": "#1B1A1C", "matte_graphite": "#29272A" },
+    "secondary": { "metallic_gold": "#B8924F", "champagne_gold": "#D8B777", "antique_gold": "#98733D" },
+    "accent": { "warm_ivory": "#F0E4CF", "sunset_amber": "#E9A85C", "agave_green": "#53634A" },
+    "suggested_distribution": { "black_percent": 70, "gold_percent": 20, "neutral_percent": 10 }
+  },
+  "product_bottle": {
+    "type": "Premium sculptural tequila bottle",
+    "material_appearance": "Opaque black glass, glossy",
+    "body": "Wide tapered trapezoidal body, broad base with rounded lower corners, narrow sloping shoulders",
+    "neck": "Long narrow neck with helical twisted relief",
+    "closure": "Geometric faceted black stopper with thin gold ring",
+    "front_decoration": "Metallic gold printed baroque-botanical ornaments framing central typography",
+    "visible_text": { "brand": "Elodia", "category": "TEQUILA AÑEJO", "volume": "750 ml", "origin": "HECHO EN MÉXICO", "other_small_text": "Requires verification" },
+    "preservation_rules": {
+      "preserve_original_silhouette": true,
+      "preserve_twisted_neck": true,
+      "preserve_geometric_stopper": true,
+      "preserve_gold_ornaments": true,
+      "preserve_logo": true,
+      "do_not_invent_label_text": true,
+      "do_not_change_bottle_proportions": true
+    }
+  },
+  "packaging": {
+    "type": "Luxury presentation box, three-panel open display, matte charcoal black",
+    "right_panel": { "heading": "EDICIÓN ESPECIAL CONMEMORATIVA 2026", "signature": "Jorge Serratos", "symbolic_inscription": "1+1=3" }
+  },
+  "typography": {
+    "primary": { "classification": "Elegant serif, high contrast", "usage": ["Brand name", "Product category", "Premium headlines"], "color": "#D8B777" },
+    "secondary": { "classification": "Classical serif, uppercase, formal", "usage": ["Edition names", "Product information", "Packaging headings"] },
+    "decorative": { "classification": "Handwritten signature", "usage": "Jorge Serratos signature" },
+    "font_identification": { "exact_font_confirmed": false, "instruction": "Do not claim an exact font family without original brand files" }
+  },
+  "photography": {
+    "style": "Luxury cinematic product photography, agave field at golden hour, warm backlight, shallow depth of field, approx. 4:5 portrait"
+  },
+  "digital_branding": {
+    "application": "ELODIA OS",
+    "theme": "Premium dark interface",
+    "background": "#101012",
+    "sidebar": "#171619",
+    "cards": "#211E1C",
+    "primary_accent": "#D8B777",
+    "secondary_accent": "#B8924F",
+    "primary_text": "#F5EBDD",
+    "secondary_text": "#B9B1A4",
+    "borders": "#40392F",
+    "ux_rules": [
+      "Prioritize readability",
+      "Use decorative elements sparingly",
+      "Avoid excessive gold gradients",
+      "Preserve professional dashboard usability",
+      "Keep accessible status colors distinct"
+    ]
+  },
+  "creative_constraints": {
+    "must_preserve": ["Official ELODIA name", "Black and gold visual identity", "Premium positioning", "Distinctive bottle silhouette", "Original packaging identity"],
+    "must_avoid": ["Replacing the official logo", "Inventing product certifications", "Changing official label information", "Generic tequila branding", "Excessive decorative clutter", "Unverified product claims"]
+  }
+}
