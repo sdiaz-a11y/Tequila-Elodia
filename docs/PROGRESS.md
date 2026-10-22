@@ -1,6 +1,6 @@
 # PROGRESS — ELODIA OS
 
-**Fase actual:** Fase 0 — Análisis y arquitectura (**completada, pendiente de aprobación**)
+**Fase actual:** Fase 1 — Sprint 1.1 (monorepo) completado; siguiente: 1.2 (Prisma + Supabase)
 **Última actualización:** 2026-10-22
 
 ## Módulos completados
@@ -33,3 +33,9 @@ N/A (fase solo documental). Verificado: versiones de herramientas del entorno.
 ## Próximos pasos
 1. Revisión y aprobación de Fase 0 y respuesta a las 10 decisiones pendientes de [ROADMAP.md](ROADMAP.md).
 2. Iniciar Fase 1, Sprint 1.1 (monorepo).
+
+## Sprint 1.1 (2026-10-22) — Monorepo
+- pnpm 12 + Turborepo; `packages/{config,shared}`, `apps/api` (NestJS 12: helmet, throttler, OpenAPI en `/api/docs`, `GET /api/v1/health`), `apps/web` (Next 16 + Tailwind 4, tema ELODIA, botella oficial).
+- TypeScript fijado en 5.9 (TS 7 es muy reciente para el ecosistema). Prisma: la etiqueta `latest` es un RC (8.0.0-rc); se usará 7.x estable en el Sprint 1.2.
+- Verificado: `pnpm build`, `pnpm typecheck`, `pnpm test` OK; health responde 200 con cabeceras de seguridad.
+- Pendiente de 1.1: ESLint (hoy `lint` = tsc), CI en GitHub Actions.
