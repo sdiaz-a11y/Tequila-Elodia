@@ -21,6 +21,7 @@ Todo el backlog de [ROADMAP.md](ROADMAP.md) (Fase 1 en adelante).
 
 ## Decisiones tomadas (propuestas)
 - Monorepo pnpm + Turborepo; Next.js + NestJS + Prisma + PostgreSQL.
+- **Base de datos: Supabase** (decisión del usuario, 2026-10-22). Uso solo como PostgreSQL; sin Supabase Auth ni acceso desde el frontend.
 - Sesiones server-side (cookie httpOnly) en lugar de JWT en navegador.
 - Zod como lenguaje único de validación (web + api) en `packages/shared`.
 - RBAC por recurso+acción+alcance, deny-by-default.

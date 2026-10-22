@@ -45,7 +45,7 @@ elodia-os/
 |---|---|---|
 | Frontend | Next.js (App Router), TS estricto, Tailwind, shadcn/ui, Lucide, Recharts, RHF + Zod | Versiones estables se verifican al instalar (Fase 1) |
 | Backend | NestJS, TS, OpenAPI (`@nestjs/swagger`), `nestjs-zod` | Validación con Zod (un solo lenguaje de esquemas) en vez de class-validator |
-| BD | PostgreSQL + Prisma, migraciones versionadas | |
+| BD | **Supabase (PostgreSQL gestionado)** + Prisma, migraciones versionadas | Prisma conecta por `DIRECT_URL` (migraciones) y pooler `DATABASE_URL` (runtime). Solo se usa Postgres: la auth es propia (sesiones), no Supabase Auth; la autorización se aplica en la API, con RLS activado y sin políticas para bloquear acceso directo vía PostgREST/anon key. |
 | Auth | Sesiones server-side (cookie `httpOnly`, `Secure`, `SameSite=Lax`) con argon2id; TOTP 2FA opcional para roles altos | Evita JWT en localStorage |
 | Archivos | API S3-compatible (Cloudflare R2), URLs prefirmadas | Bucket privado |
 | Jobs | BullMQ + Redis | Fase 2 |
