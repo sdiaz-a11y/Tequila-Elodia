@@ -17,7 +17,6 @@ Todo el backlog de [ROADMAP.md](ROADMAP.md) (Fase 1 en adelante).
 
 ## Problemas detectados
 - Faltan pnpm, Docker, PostgreSQL y Redis en el equipo.
-- El directorio no es un repositorio git (se inicializará en Fase 1 con tu autorización).
 - Faltan logotipo vectorial, tipografías oficiales y botella con transparencia real (ver BRANDING.md).
 
 ## Decisiones tomadas (propuestas)
