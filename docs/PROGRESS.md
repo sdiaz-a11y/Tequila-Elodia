@@ -17,7 +17,7 @@ Todo el backlog de [ROADMAP.md](ROADMAP.md) (Fase 1 en adelante).
 
 ## Problemas detectados
 - Faltan pnpm, Docker, PostgreSQL y Redis en el equipo.
-- Faltan logotipo vectorial, tipografías oficiales y botella con transparencia real (ver BRANDING.md).
+- Faltan logotipo vectorial independiente y tipografías oficiales (ver BRANDING.md).
 
 ## Decisiones tomadas (propuestas)
 - Monorepo pnpm + Turborepo; Next.js + NestJS + Prisma + PostgreSQL.

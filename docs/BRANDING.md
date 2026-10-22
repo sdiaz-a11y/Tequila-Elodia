@@ -5,7 +5,7 @@ Fuente: referencia de identidad visual v1.0 ([brand-reference.json](brand-refere
 ## Recursos oficiales (no modificar)
 | Archivo | Contenido |
 |---|---|
-| `assets/brand/official/elodia-botella.png` | Botella de producto. **Ojo:** tiene fondo negro con degradado dorado, no es transparente. Para usarla sobre la UI se necesita una versión con canal alfa (pendiente). |
+| `assets/brand/official/elodia-botella.png` | Botella de producto, PNG 1024×1536 con transparencia real (RGBA). Usable directamente sobre la UI oscura. |
 | `assets/brand/official/elodia-caja-presentacion.jpeg` | Caja de presentación en campo de agave (foto de referencia de marca). |
 
 Faltan: logotipo vectorial independiente (SVG/PNG con transparencia), tipografías oficiales, firma de Jorge Serratos aislada. Hasta tenerlos, la UI usa texto "ELODIA" en tipografía serif provisional, **sin** simular el logotipo.
