@@ -1,23 +1,43 @@
+import 'server-only';
 import { cache } from 'react';
-import { cookies } from 'next/headers';
-import type { SessionUser } from '@elodia/shared';
-
-/** Server-side API origin (the browser never sees it: it talks to /api/v1 on the web origin). */
-// Trailing slashes are dropped: on Vercel the value comes from a service binding.
-export const API_URL = (process.env.API_URL ?? 'http://localhost:4000').replace(/\/+$/, '');
+import {
+  ROLE_KEYS,
+  grantsForRole,
+  permissionKey,
+  type RoleKey,
+  type SessionUser,
+} from '@elodia/shared';
+import { createSupabase } from '@/lib/supabase/server';
 
 /**
- * Resolves the signed-in user on the server by forwarding the session cookie to the API.
- * Deduplicated per request. Returns null when there is no valid session.
+ * The signed-in user, validated against Supabase Auth on every request (never trusting the cookie
+ * alone) plus their active profile. Permissions are derived from the role; the database enforces
+ * the same rules with Row Level Security.
  */
 export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
-  const cookieHeader = (await cookies()).toString();
-  if (!cookieHeader) return null;
-  const res = await fetch(`${API_URL}/api/v1/auth/me`, {
-    headers: { cookie: cookieHeader },
-    cache: 'no-store',
-  });
-  if (res.status === 401) return null;
-  if (!res.ok) throw new Error(`No se pudo verificar la sesión (${res.status})`);
-  return ((await res.json()) as { user: SessionUser }).user;
+  const supabase = await createSupabase();
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) return null;
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('id,email,name,role,active')
+    .eq('id', auth.user.id)
+    .maybeSingle();
+  if (!profile?.active || !(ROLE_KEYS as readonly string[]).includes(profile.role)) return null;
+
+  const permissions: SessionUser['permissions'] = {};
+  for (const g of grantsForRole(profile.role as RoleKey))
+    permissions[permissionKey(g.resource, g.action)] = g.scope;
+
+  return {
+    id: profile.id,
+    organizationId: 'elodia',
+    email: profile.email,
+    name: profile.name || profile.email,
+    roles: [profile.role],
+    totpEnabled: false,
+    mustChangePassword: false,
+    permissions,
+  };
 });

@@ -2,15 +2,14 @@
 
 import { Suspense, useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { Dialog as DialogPrimitive, VisuallyHidden } from 'radix-ui';
 import { Menu, Search, X } from 'lucide-react';
-import { toast } from 'sonner';
 import { Wordmark } from '@/components/brand/wordmark';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogClose, SheetContent } from '@/components/ui/dialog';
-import { api } from '@/lib/api';
+import { logout } from '@/app/actions/auth';
 import { findNavItem } from '@/lib/nav';
 import { useSession } from '@/lib/session-client';
 import { Breadcrumbs } from './breadcrumbs';
@@ -41,7 +40,6 @@ export function AppShell({
 }) {
   const user = useSession();
   const isApple = useIsApple();
-  const router = useRouter();
   const pathname = usePathname();
   const queryClient = useQueryClient();
   const [collapsed, setCollapsed] = useState(initialCollapsed);
@@ -57,16 +55,9 @@ export function AppShell({
   }, []);
 
   const signOut = useCallback(async () => {
-    try {
-      await api('/auth/logout', { method: 'POST' });
-    } catch {
-      // A failed logout call must never trap the user: the cookie is cleared client-side by navigation below.
-    }
     queryClient.clear();
-    toast.success('Sesión cerrada');
-    router.replace('/login');
-    router.refresh();
-  }, [queryClient, router]);
+    await logout();
+  }, [queryClient]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

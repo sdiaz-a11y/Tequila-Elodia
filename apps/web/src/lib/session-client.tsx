@@ -1,12 +1,11 @@
 'use client';
 
-import { useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { createContext, useContext } from 'react';
 import type { SessionUser } from '@elodia/shared';
-import { api } from '@/lib/api';
-import { SESSION_KEY } from '@/components/providers';
 
-/** Seeds the client cache with the user resolved on the server, so there is no loading flash. */
+const SessionContext = createContext<SessionUser | null>(null);
+
+/** Hands the user resolved on the server to client components. */
 export function SessionProvider({
   user,
   children,
@@ -14,20 +13,11 @@ export function SessionProvider({
   user: SessionUser;
   children: React.ReactNode;
 }) {
-  const qc = useQueryClient();
-  useState(() => {
-    qc.setQueryData(SESSION_KEY, user);
-    return null;
-  });
-  return children;
+  return <SessionContext.Provider value={user}>{children}</SessionContext.Provider>;
 }
 
-/** The signed-in user. Refetches after changes such as enabling 2FA (`invalidateQueries(SESSION_KEY)`). */
 export function useSession(): SessionUser {
-  const { data } = useQuery({
-    queryKey: SESSION_KEY,
-    queryFn: async () => (await api<{ user: SessionUser }>('/auth/me')).user,
-  });
-  // The (app) layout guarantees a session before rendering; the cache is seeded by SessionProvider.
-  return data as SessionUser;
+  const user = useContext(SessionContext);
+  if (!user) throw new Error('useSession must be used inside the signed-in layout');
+  return user;
 }

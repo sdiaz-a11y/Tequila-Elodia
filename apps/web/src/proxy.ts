@@ -1,14 +1,29 @@
 import { NextResponse, type NextRequest } from 'next/server';
-
-// Both names: `__Host-` in production, plain on http://localhost. The API decides which one it issues.
-const SESSION_COOKIES = ['__Host-elodia_session', 'elodia_session'];
+import { createServerClient } from '@supabase/ssr';
 
 /**
- * Fast path only: no session cookie at all → /login. The real validation happens in the API
- * (and again in the (app) layout), so a forged cookie gets nothing.
+ * Keeps the Supabase session fresh (rotates cookies) and sends visitors without a session to /login.
+ * The real check happens again in the (app) layout and in every query through Row Level Security.
  */
-export function proxy(req: NextRequest) {
-  if (SESSION_COOKIES.some((name) => req.cookies.has(name))) return NextResponse.next();
+export async function proxy(req: NextRequest) {
+  let res = NextResponse.next({ request: req });
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    {
+      cookies: {
+        getAll: () => req.cookies.getAll(),
+        setAll: (list) => {
+          for (const { name, value } of list) req.cookies.set(name, value);
+          res = NextResponse.next({ request: req });
+          for (const { name, value, options } of list) res.cookies.set(name, value, options);
+        },
+      },
+    },
+  );
+  const { data } = await supabase.auth.getClaims();
+  if (data?.claims) return res;
+
   const url = new URL('/login', req.url);
   const target = req.nextUrl.pathname + req.nextUrl.search;
   if (target !== '/') url.searchParams.set('next', target);
@@ -16,5 +31,5 @@ export function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!login|api|_next|brand|favicon.ico|.*\\..*).*)'],
+  matcher: ['/((?!login|_next|brand|favicon.ico|.*\\..*).*)'],
 };

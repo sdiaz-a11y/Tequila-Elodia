@@ -83,20 +83,32 @@ export const NAV: NavGroup[] = [
     label: 'Comercial',
     items: [
       {
-        label: 'CRM',
-        href: '/crm',
+        label: 'Empresas y prospectos',
+        href: '/empresas',
         icon: Handshake,
-        status: 'soon',
-        plan: 'Sprint 1.7',
+        status: 'live',
         resource: 'accounts',
       },
       {
-        label: 'Oportunidades',
-        href: '/oportunidades',
+        label: 'Contactos',
+        href: '/contactos',
+        icon: UsersRound,
+        status: 'live',
+        resource: 'contacts',
+      },
+      {
+        label: 'Pipeline',
+        href: '/pipeline',
         icon: Target,
-        status: 'soon',
-        plan: 'Sprint 1.7',
+        status: 'live',
         resource: 'opportunities',
+      },
+      {
+        label: 'Actividades',
+        href: '/actividades',
+        icon: CalendarDays,
+        status: 'live',
+        resource: 'activities',
       },
       {
         label: 'Cotizaciones',
@@ -118,17 +130,15 @@ export const NAV: NavGroup[] = [
         label: 'Distribuidores',
         href: '/distribuidores',
         icon: Truck,
-        status: 'soon',
-        plan: 'Sprint 1.8',
+        status: 'live',
         resource: 'distributors',
       },
       {
-        label: 'Expansión territorial',
-        href: '/expansion',
+        label: 'Territorios',
+        href: '/territorios',
         icon: Globe,
-        status: 'soon',
-        plan: 'Sprint 1.8',
-        resource: 'expansion_plans',
+        status: 'live',
+        resource: 'territories',
       },
     ],
   },
@@ -236,17 +246,9 @@ export const NAV: NavGroup[] = [
       {
         label: 'Equipo',
         href: '/equipo',
-        icon: UsersRound,
-        status: 'soon',
-        plan: 'Sprint 1.9',
-        resource: 'tasks',
-      },
-      {
-        label: 'Usuarios y permisos',
-        href: '/usuarios',
         icon: KeyRound,
         status: 'live',
-        resource: 'users',
+        resource: 'tasks',
       },
     ],
   },
@@ -309,10 +311,7 @@ export const NAV: NavGroup[] = [
   },
 ];
 
-export const ACCOUNT_PAGES = [
-  { label: 'Seguridad de la cuenta', href: '/cuenta/seguridad' },
-  { label: 'Cambiar contraseña', href: '/cuenta/contrasena' },
-] as const;
+export const ACCOUNT_PAGES = [{ label: 'Cambiar contraseña', href: '/cuenta/contrasena' }] as const;
 
 const READ: Action = 'read';
 
@@ -349,12 +348,7 @@ export interface Crumb {
 export function breadcrumbsFor(pathname: string): Crumb[] {
   const account = ACCOUNT_PAGES.find((p) => p.href === pathname);
   if (account) return [{ label: 'Cuenta' }, { label: account.label }];
-  if (pathname === '/usuarios/roles')
-    return [
-      { label: 'Administración' },
-      { label: 'Usuarios y permisos', href: '/usuarios' },
-      { label: 'Roles y permisos' },
-    ];
+  if (pathname === '/usuarios/roles') return [{ label: 'Administración' }];
   const hit = findNavItem(pathname);
   if (!hit) return [{ label: 'Inicio', href: '/' }];
   if (hit.item.href === '/') return [{ label: 'Dirección' }, { label: hit.item.label }];

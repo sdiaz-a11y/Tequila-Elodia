@@ -31,16 +31,26 @@ describe('navigation', () => {
       flatNav()
         .filter((i) => i.status === 'live')
         .map((i) => i.href),
-    ).toEqual(['/', '/usuarios', '/auditoria']);
+    ).toEqual([
+      '/',
+      '/empresas',
+      '/contactos',
+      '/pipeline',
+      '/actividades',
+      '/distribuidores',
+      '/territorios',
+      '/equipo',
+      '/auditoria',
+    ]);
   });
 
   it('hides modules the role cannot read (UI hint only; the API enforces)', () => {
     const labels = (role: RoleKey) =>
       visibleNav(userWith(role)).flatMap((g) => g.items.map((i) => i.label));
     expect(labels('tech_superadmin')).toHaveLength(flatNav().length);
-    expect(labels('salesperson')).toContain('CRM');
+    expect(labels('salesperson')).toContain('Empresas y prospectos');
     expect(labels('salesperson')).not.toContain('Finanzas');
-    expect(labels('salesperson')).not.toContain('Usuarios y permisos');
+    expect(labels('salesperson')).not.toContain('Auditoría');
     // A distributor reads its own account, but nothing commercial-internal or financial.
     expect(labels('external_distributor')).not.toContain('Oportunidades');
     expect(labels('external_distributor')).not.toContain('Finanzas');
@@ -56,17 +66,15 @@ describe('navigation', () => {
 
   it('resolves the active item and breadcrumbs', () => {
     expect(findNavItem('/')?.item.label).toBe('Dashboard ejecutivo');
-    expect(findNavItem('/crm/cuentas/123')?.item.href).toBe('/crm');
+    expect(findNavItem('/empresas/123')?.item.href).toBe('/empresas');
     expect(findNavItem('/nada')).toBeNull();
-    expect(breadcrumbsFor('/crm')).toEqual([{ label: 'Comercial' }, { label: 'CRM' }]);
-    expect(breadcrumbsFor('/usuarios/roles')).toEqual([
-      { label: 'Administración' },
-      { label: 'Usuarios y permisos', href: '/usuarios' },
-      { label: 'Roles y permisos' },
+    expect(breadcrumbsFor('/empresas')).toEqual([
+      { label: 'Comercial' },
+      { label: 'Empresas y prospectos' },
     ]);
-    expect(breadcrumbsFor('/cuenta/seguridad')).toEqual([
+    expect(breadcrumbsFor('/cuenta/contrasena')).toEqual([
       { label: 'Cuenta' },
-      { label: 'Seguridad de la cuenta' },
+      { label: 'Cambiar contraseña' },
     ]);
   });
 });

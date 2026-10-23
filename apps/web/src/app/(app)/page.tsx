@@ -1,44 +1,115 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { ArrowUpRight, BarChart3, CircleCheck, CircleDashed, CircleX } from 'lucide-react';
+import { ArrowUpRight, CalendarClock, Handshake, Target, Truck, TriangleAlert } from 'lucide-react';
 import { StarDivider } from '@/components/brand/star-divider';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
-import { COMING_SOON_LABEL, visibleNav } from '@/lib/nav';
-import { formatRange, parsePeriod, periodRange } from '@/lib/period';
-import { API_URL, getSessionUser } from '@/lib/session';
+import { formatDateTime, formatMoney, isOverdue } from '@/lib/format';
+import { canRead } from '@/lib/roles';
+import { getSessionUser } from '@/lib/session';
+import { createSupabase } from '@/lib/supabase/server';
 import { formatLongDate, greetingFor } from '@/lib/utils';
 
 export const metadata: Metadata = { title: 'Dashboard ejecutivo' };
 
-async function databaseUp(): Promise<boolean> {
-  try {
-    const res = await fetch(`${API_URL}/api/v1/health/ready`, {
-      cache: 'no-store',
-      signal: AbortSignal.timeout(4000),
-    });
-    return res.ok;
-  } catch {
-    return false;
-  }
-}
+const count = async (q: PromiseLike<{ count: number | null }>) => (await q).count ?? 0;
 
-export default async function DashboardPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ periodo?: string }>;
-}) {
-  const [{ periodo }, user, dbOk] = await Promise.all([
-    searchParams,
-    getSessionUser(),
-    databaseUp(),
-  ]);
+export default async function DashboardPage() {
+  const user = await getSessionUser();
   if (!user) return null; // the (app) layout already redirected
-  const range = formatRange(periodRange(parsePeriod(periodo)));
   const firstName = user.name.trim().split(/\s+/)[0];
-  const date = formatLongDate();
-  const groups = visibleNav(user);
+
+  let stats: {
+    prospects: number;
+    clients: number;
+    distributors: number;
+    activeDistributors: number;
+    openCount: number;
+    openValue: number;
+    wonCount: number;
+    wonValue: number;
+    pending: number;
+    overdue: number;
+    upcoming: {
+      id: string;
+      subject: string;
+      due_at: string | null;
+      account: { name: string } | null;
+    }[];
+    stages: { name: string; kind: string; n: number; sum: number }[];
+  } | null = null;
+
+  if (canRead(user)) {
+    const supabase = await createSupabase();
+    const head = { count: 'exact' as const, head: true };
+    const [
+      prospects,
+      clients,
+      distributors,
+      activeDistributors,
+      pending,
+      overdue,
+      stagesRes,
+      oppsRes,
+      upcoming,
+    ] = await Promise.all([
+      count(
+        supabase.from('accounts').select('id', head).is('deleted_at', null).eq('type', 'prospect'),
+      ),
+      count(
+        supabase.from('accounts').select('id', head).is('deleted_at', null).eq('type', 'client'),
+      ),
+      count(supabase.from('distributors').select('id', head)),
+      count(supabase.from('distributors').select('id', head).eq('status', 'active')),
+      count(supabase.from('activities').select('id', head).is('done_at', null)),
+      count(
+        supabase
+          .from('activities')
+          .select('id', head)
+          .is('done_at', null)
+          .lt('due_at', new Date().toISOString()),
+      ),
+      supabase.from('pipeline_stages').select('id,name,kind').order('position'),
+      supabase.from('opportunities').select('stage_id,amount').limit(2000),
+      supabase
+        .from('activities')
+        .select('id,subject,due_at,account:accounts!account_id(name)')
+        .is('done_at', null)
+        .order('due_at', { ascending: true, nullsFirst: false })
+        .limit(6),
+    ]);
+    const stageRows = stagesRes.data ?? [];
+    const opps = oppsRes.data ?? [];
+    const stages = stageRows.map((s) => {
+      const mine = opps.filter((o) => o.stage_id === s.id);
+      return {
+        name: s.name,
+        kind: s.kind,
+        n: mine.length,
+        sum: mine.reduce((t, o) => t + Number(o.amount), 0),
+      };
+    });
+    const sum = (kind: string) => stages.filter((s) => s.kind === kind);
+    stats = {
+      prospects,
+      clients,
+      distributors,
+      activeDistributors,
+      openCount: sum('open').reduce((t, s) => t + s.n, 0),
+      openValue: sum('open').reduce((t, s) => t + s.sum, 0),
+      wonCount: sum('won').reduce((t, s) => t + s.n, 0),
+      wonValue: sum('won').reduce((t, s) => t + s.sum, 0),
+      pending,
+      overdue,
+      upcoming: (upcoming.data ?? []) as unknown as NonNullable<typeof stats>['upcoming'],
+      stages,
+    };
+  }
+
+  const nothingYet =
+    stats && stats.prospects + stats.clients + stats.distributors + stats.openCount === 0;
+  const maxStage = Math.max(1, ...(stats?.stages.map((s) => s.n) ?? [1]));
 
   return (
     <div className="animate-fade-up grid grid-cols-[minmax(0,1fr)] gap-10">
@@ -47,122 +118,175 @@ export default async function DashboardPage({
           {greetingFor()}, <span className="text-gold">{firstName}</span>
         </h1>
         <StarDivider className="w-48" />
-        <p className="text-sm text-muted first-letter:uppercase">{date}</p>
+        <p className="text-sm text-muted first-letter:uppercase">{formatLongDate()}</p>
       </header>
 
-      <Card>
-        <CardHeader className="flex-row items-start justify-between gap-4">
-          <div className="grid gap-1">
-            <CardTitle>Indicadores del periodo</CardTitle>
-            <CardDescription>Ventas, pipeline, campañas y tareas con datos reales.</CardDescription>
-          </div>
-          <Badge className="tabular shrink-0">{range}</Badge>
-        </CardHeader>
-        <CardContent className="pt-2">
-          <EmptyState
-            icon={BarChart3}
-            title="Aún no hay indicadores que mostrar"
-            description="Cuando se registren cuentas, oportunidades, campañas y tareas, sus cifras aparecerán aquí. ELODIA OS no muestra datos de ejemplo."
-          />
-        </CardContent>
-      </Card>
-
-      <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-2">
+      {!stats ? (
         <Card>
-          <CardHeader>
-            <CardTitle>Estado de la plataforma</CardTitle>
-            <CardDescription>Comprobado al abrir esta página.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ul className="divide-y divide-line">
-              <StatusRow
-                ok
-                label="Sesión segura"
-                detail="Cookie protegida y permisos verificados en el servidor"
-              />
-              <StatusRow
-                ok={dbOk}
-                label="Base de datos"
-                detail={dbOk ? 'Conectada' : 'Sin respuesta; reintenta en unos minutos'}
-              />
-              <StatusRow
-                ok={user.totpEnabled}
-                neutral={!user.totpEnabled}
-                label="Verificación en dos pasos"
-                detail={user.totpEnabled ? 'Activa en tu cuenta' : 'No activada'}
+          <EmptyState
+            title="Tu rol no incluye indicadores"
+            description="Si necesitas ver las cifras comerciales, pide a un administrador que revise tu acceso."
+          />
+        </Card>
+      ) : (
+        <>
+          <section aria-label="Indicadores" className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <Kpi
+              icon={Handshake}
+              label="Prospectos"
+              value={String(stats.prospects)}
+              href="/empresas?f_type=prospect"
+            />
+            <Kpi
+              icon={Handshake}
+              label="Clientes"
+              value={String(stats.clients)}
+              href="/empresas?f_type=client"
+            />
+            <Kpi
+              icon={Truck}
+              label="Distribuidores"
+              value={String(stats.distributors)}
+              hint={`${stats.activeDistributors} activos`}
+              href="/distribuidores"
+            />
+            <Kpi
+              icon={Target}
+              label="Pipeline abierto"
+              value={formatMoney(stats.openValue)}
+              hint={`${stats.openCount} oportunidades`}
+              href="/pipeline"
+            />
+          </section>
+
+          {nothingYet ? (
+            <Card>
+              <EmptyState
+                icon={Handshake}
+                title="Empieza registrando tu primera empresa"
+                description="Cuando captures empresas, oportunidades y actividades, sus cifras aparecerán aquí. ELODIA OS no muestra datos de ejemplo."
                 action={
-                  user.totpEnabled ? null : (
-                    <Link
-                      href="/cuenta/seguridad"
-                      className="inline-flex items-center gap-1 text-sm text-gold hover:underline"
-                    >
-                      Activar <ArrowUpRight className="size-3.5" aria-hidden />
-                    </Link>
-                  )
+                  <Link
+                    href="/empresas"
+                    className="inline-flex h-10 items-center gap-2 rounded-control bg-gold px-4 text-sm font-medium text-background hover:bg-[#e3c88e]"
+                  >
+                    Ir a Empresas <ArrowUpRight className="size-4" aria-hidden />
+                  </Link>
                 }
               />
-            </ul>
-          </CardContent>
-        </Card>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Oportunidades por etapa</CardTitle>
+                  <CardDescription>
+                    Ganadas: <span className="tabular text-fg">{stats.wonCount}</span> ·{' '}
+                    <span className="tabular text-fg">{formatMoney(stats.wonValue)}</span>
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ul className="grid gap-3">
+                    {stats.stages.map((s) => (
+                      <li key={s.name} className="grid gap-1.5">
+                        <div className="flex items-baseline justify-between gap-3 text-sm">
+                          <span className="text-fg">{s.name}</span>
+                          <span className="tabular text-muted">
+                            {s.n} · {formatMoney(s.sum)}
+                          </span>
+                        </div>
+                        <div className="h-1.5 overflow-hidden rounded-full bg-surface-3">
+                          <div
+                            className={`h-full rounded-full ${s.kind === 'lost' ? 'bg-danger/70' : s.kind === 'won' ? 'bg-success' : 'bg-gold'}`}
+                            style={{ width: `${(s.n / maxStage) * 100}%` }}
+                          />
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Módulos</CardTitle>
-            <CardDescription>Lo que tu rol puede ver y cuándo llega cada módulo.</CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-5">
-            {groups.map((g) => (
-              <div key={g.label} className="grid gap-2">
-                <h3 className="text-[0.6875rem] font-medium uppercase tracking-[0.16em] text-faint">
-                  {g.label}
-                </h3>
-                <ul className="flex flex-wrap gap-1.5">
-                  {g.items.map((i) => (
-                    <li key={i.href}>
-                      {i.status === 'live' ? (
-                        <Link href={i.href} className="inline-flex">
-                          <Badge tone="gold">{i.label}</Badge>
-                        </Link>
-                      ) : (
-                        <Badge>
-                          {i.label} · {COMING_SOON_LABEL}
-                        </Badge>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      </div>
+              <Card>
+                <CardHeader className="flex-row items-start justify-between gap-3">
+                  <div className="grid gap-1">
+                    <CardTitle>Próximas actividades</CardTitle>
+                    <CardDescription>
+                      {stats.pending} pendientes
+                      {stats.overdue ? ` · ${stats.overdue} vencidas` : ''}
+                    </CardDescription>
+                  </div>
+                  {stats.overdue ? (
+                    <Badge tone="danger">
+                      <TriangleAlert className="size-3" aria-hidden />
+                      Vencidas
+                    </Badge>
+                  ) : null}
+                </CardHeader>
+                <CardContent>
+                  {stats.upcoming.length === 0 ? (
+                    <EmptyState
+                      icon={CalendarClock}
+                      title="Todo al día"
+                      description="No hay actividades pendientes."
+                      className="py-8"
+                    />
+                  ) : (
+                    <ul className="divide-y divide-line">
+                      {stats.upcoming.map((a) => (
+                        <li
+                          key={a.id}
+                          className="flex items-center justify-between gap-3 py-2.5 text-sm"
+                        >
+                          <span className="min-w-0">
+                            <span className="block truncate text-fg">{a.subject}</span>
+                            <span className="text-[0.8125rem] text-muted">
+                              {a.account?.name ?? 'Sin empresa'}
+                            </span>
+                          </span>
+                          <span
+                            className={`tabular shrink-0 text-xs ${isOverdue(a.due_at, null) ? 'text-danger' : 'text-muted'}`}
+                          >
+                            {a.due_at ? formatDateTime(a.due_at) : 'Sin fecha'}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
 
-function StatusRow({
-  ok,
-  neutral,
+function Kpi({
+  icon: Icon,
   label,
-  detail,
-  action,
+  value,
+  hint,
+  href,
 }: {
-  ok: boolean;
-  neutral?: boolean;
+  icon: React.ComponentType<{ className?: string; 'aria-hidden'?: boolean }>;
   label: string;
-  detail: string;
-  action?: React.ReactNode;
+  value: string;
+  hint?: string;
+  href: string;
 }) {
-  const Icon = neutral ? CircleDashed : ok ? CircleCheck : CircleX;
-  const tone = neutral ? 'text-warning' : ok ? 'text-success' : 'text-danger';
   return (
-    <li className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
-      <Icon className={`size-[1.125rem] shrink-0 ${tone}`} aria-hidden />
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium text-fg">{label}</p>
-        <p className="truncate text-[0.8125rem] text-muted">{detail}</p>
-      </div>
-      {action}
-    </li>
+    <Link
+      href={href}
+      className="group grid gap-3 rounded-panel border border-line bg-surface p-5 shadow-panel transition-colors hover:border-line-strong"
+    >
+      <span className="flex items-center justify-between text-muted">
+        <span className="text-sm">{label}</span>
+        <Icon className="size-4 text-gold" aria-hidden />
+      </span>
+      <span className="tabular font-display text-3xl font-semibold text-fg">{value}</span>
+      <span className="text-xs text-faint">{hint ?? 'Ver detalle'}</span>
+    </Link>
   );
 }
