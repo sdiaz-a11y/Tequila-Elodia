@@ -183,7 +183,7 @@ El despliegue lo hace el usuario (D10, D31). **No se ha desplegado nada ni se ha
 **Riesgos conocidos (sin probar):**
 
 - El repo fija `pnpm@12.15.0`; si Vercel no lo soporta, hay que ajustar `packageManager` o el comando de instalación.
-- La API se ejecuta desde `dist/main.js` (compilado con `tsc`, necesario por los decoradores de NestJS); si Vercel no acepta ese `entrypoint`, probar `src/main.ts` y revisar que la inyección de dependencias siga funcionando.
+- Primer intento: `entrypoint: dist/main.js` fue rechazado por Vercel (`ENTRYPOINT_NOT_FOUND`: valida el archivo antes de construir). Ahora se deja que Vercel detecte `src/main.ts`. **Riesgo abierto:** Vercel compila la API por su cuenta; si no emite metadatos de decoradores, NestJS fallará al arrancar con "can't resolve dependencies" (ver Runtime Logs).
 - **Limitación de tasa del login en memoria:** en funciones serverless cada instancia cuenta por separado, así que el límite por IP es más débil; el bloqueo progresivo de cuenta (en base de datos) sigue protegiendo.
 - **Plan de Vercel:** el plan Hobby es solo para uso no comercial. Para ELODIA como negocio corresponde el plan Pro (de pago). Verifica precios y términos vigentes antes de decidir.
 - Las _preview deployments_ tienen "Deployment Protection" (inicio de sesión de Vercel) por defecto.

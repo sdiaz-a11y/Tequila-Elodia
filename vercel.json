@@ -9,7 +9,6 @@
     },
     "backend": {
       "root": "apps/api",
-      "entrypoint": "dist/main.js",
       "installCommand": "cd ../.. && pnpm install --frozen-lockfile",
       "buildCommand": "cd ../.. && pnpm turbo run build --filter=@elodia/api..."
     }
