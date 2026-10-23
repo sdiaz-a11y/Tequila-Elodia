@@ -38,7 +38,7 @@ Fase 0 (documentación) aprobada. Fase 1 en curso. Todo está en `main` de `gith
 
 ### Datos que existen hoy en Supabase
 
-- Organización **ELODIA** con 10 roles de sistema y sus permisos. **Cero usuarios reales** (falta decidir el correo del superadmin técnico y del VP).
+- Organización **ELODIA** con 10 roles de sistema y sus permisos. **Un usuario real: `sdiaz@zigma3.com`, rol `tech_superadmin` (superadmin técnico), creado el 2026-10-23** con una contraseña temporal fuerte entregada en el chat (no está en el repo). Falta el usuario del VP.
 - Organización **ELODIA-TEST**: usuarios de prueba creados por los tests y por mí (un usuario `demo@elodia-test.invalid`). Es basura inerte; sus filas de auditoría no se pueden borrar por diseño.
 
 ---
@@ -61,7 +61,7 @@ Fase 1 tiene 12 sprints; faltan 7. Detalle y criterios en [ROADMAP.md](ROADMAP.m
 
 ### Decisiones pendientes del usuario
 
-1. Correo y contraseña inicial del **superadmin técnico** y del **VP** (decisión 7 del ROADMAP).
+1. Correo del **VP** (decisión 7 del ROADMAP). El superadmin técnico ya existe (ver sección 2). **Cambiar su contraseña temporal**: aún no hay pantalla de cambio de contraseña (llega en el Sprint 1.6); mientras tanto se puede restablecer con el CLI. Política: mínimo 12 caracteres (la contraseña corta que se propuso, de 9, se rechazó a propósito).
 2. ¿2FA obligatorio para superadmin/VP? (D19).
 3. **Dónde corre la API** (NestJS): contenedor (Railway/Fly/VPS) o funciones de Vercel (D10). Mientras no exista, la web desplegada no puede iniciar sesión.
 4. Proveedor de correo (recuperación de contraseña, invitaciones).
@@ -137,7 +137,7 @@ La contraseña de la base va **dentro** de `DATABASE_URL`/`DIRECT_URL` **sin cor
 
 ### 4.5 Usuarios y datos de prueba
 
-No hay usuarios reales. Para entrar localmente crea uno (la contraseña va por variable de entorno, no por argumento):
+Existe el superadmin real `sdiaz@zigma3.com` en ELODIA (su contraseña temporal no está en el repo). Para crear otros usuarios, p. ej. de prueba (la contraseña va por variable de entorno, no por argumento):
 
 ```powershell
 $env:NEW_USER_PASSWORD='una-contraseña-larga-de-12+'

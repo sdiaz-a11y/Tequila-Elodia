@@ -28,6 +28,7 @@ Registro de decisiones técnicas y de producto (ADR ligero). Una fila por decisi
 | D22 | 2026-10-22 | Componentes UI propios sobre Radix (`radix-ui`), no el CLI de shadcn                 | Mismo modelo (código propio) con los tokens ELODIA; evita que el CLI reescriba `globals.css`.                                                                                                                              | Vigente   |
 | D23 | 2026-10-22 | Dependencias con ≥ 7 días de antigüedad (política de pnpm)                           | `motion@14.3.0` y `dotenv@18.0.8` fijadas; no se añaden excepciones a `minimumReleaseAge`.                                                                                                                                 | Vigente   |
 | D24 | 2026-10-23 | `docs/HANDOFF.md` se actualiza en cada push (regla en CLAUDE.md)                     | El usuario cambia de equipo; el repo debe bastar para retomar. El prompt maestro vive en `docs/MASTER_PROMPT.md`.                                                                                                          | Vigente   |
+| D25 | 2026-10-23 | Superadmin técnico real: `sdiaz@zigma3.com` (rol `tech_superadmin`, org ELODIA) | Decisión del usuario. Se mantiene la política de 12+ caracteres: la contraseña propuesta (9) no se aceptó; se entregó una temporal fuerte. 2FA recomendado, aún no obligatorio (D19). | Vigente |
 
 ## Notas de fases
 

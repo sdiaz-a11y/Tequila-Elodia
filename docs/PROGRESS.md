@@ -105,3 +105,4 @@ N/A (fase solo documental). Verificado: versiones de herramientas del entorno.
 ## Traspaso (2026-10-23)
 
 - Se añadieron `docs/HANDOFF.md` (estado, plan, requisitos, puesta en marcha en otro equipo, despliegue en Vercel, checklist por push) y `docs/MASTER_PROMPT.md`. Migración `must_change_password` aplicada en Supabase (primer paso del Sprint 1.6, aún sin uso en código).
+- 2026-10-23: creado el superadmin técnico real `sdiaz@zigma3.com` (CLI `create-user`, org ELODIA, rol `tech_superadmin`); login verificado contra la API real. Pendiente: cambio de contraseña (Sprint 1.6) y usuario del VP.
