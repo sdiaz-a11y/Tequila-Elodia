@@ -5,3 +5,8 @@ allowBuilds:
   esbuild: true
   "@swc/core": true
   "@scarf/scarf": false
+  unrs-resolver: false
+  prisma: true
+  "@prisma/engines": true
+minimumReleaseAgeExclude:
+  - dotenv@18.0.9

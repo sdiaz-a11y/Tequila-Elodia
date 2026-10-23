@@ -1,6 +1,6 @@
 # ARCHITECTURE — ELODIA OS
 
-Estado: **propuesta Fase 0 (pendiente de aprobación)**
+Estado: **aprobada; Fase 1 en curso** (ver [PROGRESS.md](PROGRESS.md) y [DECISIONS.md](DECISIONS.md))
 
 ## 1. Entorno detectado
 
@@ -8,12 +8,12 @@ Estado: **propuesta Fase 0 (pendiente de aprobación)**
 |---|---|
 | Node.js | v24.15.0 (instalado) |
 | npm | 11.12.1 (instalado) |
-| git | 2.54 (instalado; el directorio aún no es repositorio) |
-| pnpm | **no instalado** (se activa con `corepack enable`) |
+| git | 2.54 (repositorio activo) |
+| pnpm | 12.15 vía `corepack` (en Windows: `corepack enable --install-directory <dir>` y añadir `<dir>` al PATH si no hay permisos de administrador) |
 | Docker | **no instalado** |
 | PostgreSQL / Redis | **no instalados** localmente |
 
-Implicación: para desarrollo local se necesita PostgreSQL y Redis. Opciones en [ROADMAP.md](ROADMAP.md) §Decisiones pendientes.
+Implicación: la BD es Supabase (no requiere PostgreSQL local). Redis solo se necesita desde la Fase 2.
 
 ## 2. Estilo arquitectónico
 

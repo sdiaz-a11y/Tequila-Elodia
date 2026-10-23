@@ -31,9 +31,9 @@ Esquema+migración · API con DTO/Zod · permisos por recurso/acción · auditor
 
 ## Decisiones pendientes (requieren tu respuesta antes de Fase 1)
 
-1. ~~PostgreSQL local~~ → **Resuelto: Supabase.** Falta: crear el proyecto y proveer `DATABASE_URL` / `DIRECT_URL` en un `.env` local (nunca en git).
-2. **Hosting objetivo**: ¿Vercel (web) + Railway/Fly (api)? ¿Otro? (no se despliega nada sin tu autorización).
-3. **Gestor de paquetes**: confirmar pnpm (activar con corepack).
+1. ~~PostgreSQL local~~ → **Resuelto: Supabase.** Proyecto creado y claves en `.env` local. Falta solo la contraseña de BD para `DATABASE_URL` / `DIRECT_URL`.
+2. **Hosting objetivo**: `web` en **Vercel** (lo despliega el usuario). Pendiente: dónde corre `api`. Ver D10 en [DECISIONS.md](DECISIONS.md).
+3. ~~Gestor de paquetes~~ → **Resuelto: pnpm.**
 4. **Multi-organización**: ¿una sola organización (ELODIA) o preparar para varias? (el diseño ya soporta ambas; cambia UI de admin).
 5. **Recursos oficiales de marca**: logotipo, tipografías y colores oficiales; hasta entonces se usa la paleta provisional.
 6. **Idioma de la UI**: asumo español (México) con código en inglés. ¿Correcto?

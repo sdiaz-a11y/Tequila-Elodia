@@ -24,4 +24,4 @@ Monorepo pnpm + Turborepo · `apps/web` Next.js App Router + TS + Tailwind + sha
 - Al cerrar fase: resumen de archivos, funcionalidades, pruebas y pendientes.
 
 ## Comandos
-`pnpm install` · `pnpm dev` · `pnpm build` · `pnpm typecheck` · `pnpm test`. Web en :3000, API en :4000 (`PORT`). pnpm 12 bloquea scripts de instalación: se permiten en `allowBuilds` de pnpm-workspace.yaml.
+`pnpm install` · `pnpm dev` · `pnpm build` · `pnpm lint` · `pnpm typecheck` · `pnpm test`. Web en :3000, API en :4000 (`PORT`). pnpm 12 bloquea scripts de instalación: se permiten en `allowBuilds` de pnpm-workspace.yaml.

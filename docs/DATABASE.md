@@ -1,6 +1,8 @@
 # DATABASE — Modelo relacional inicial
 
-Motor: PostgreSQL · ORM: Prisma · Migraciones versionadas (`prisma migrate`). Este diseño se refina en Fase 1 por módulo; las tablas de Fase 2/3 se crean en su fase.
+Motor: PostgreSQL (Supabase) · ORM: Prisma · Migraciones versionadas (`prisma migrate`). Este diseño se refina en Fase 1 por módulo; las tablas de Fase 2/3 se crean en su fase.
+
+> **Implementado (Sprint 1.2):** identidad (organizations … sessions), CRM base (accounts, contacts, leads, pipeline_stages, opportunities, activities) y audit_logs. Ver `packages/database/prisma/schema.prisma`. RLS activado en todas las tablas sin políticas y `audit_logs` append-only por trigger.
 
 ## Convenciones
 
