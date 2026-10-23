@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 
 /** Scrolls horizontally on narrow screens instead of squashing the data. */
 export function TableWrap({ className, ...props }: React.ComponentProps<'div'>) {
-  return <div className={cn('w-full overflow-x-auto', className)} {...props} />;
+  return <div className={cn('relative w-full overflow-x-auto', className)} {...props} />;
 }
 
 export function Table({ className, ...props }: React.ComponentProps<'table'>) {

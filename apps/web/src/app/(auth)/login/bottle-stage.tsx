@@ -34,7 +34,7 @@ export function BottleStage() {
       aria-label="Tequila ELODIA Añejo"
       onPointerMove={onPointerMove}
       onPointerLeave={onPointerLeave}
-      className="relative hidden overflow-hidden bg-[#08080a] lg:grid lg:place-items-center"
+      className="relative order-first grid min-h-[44svh] place-items-center overflow-hidden bg-[#08080a] py-8 lg:order-none lg:min-h-0 lg:py-0"
     >
       <motion.div
         aria-hidden
@@ -55,17 +55,16 @@ export function BottleStage() {
           transition={{ duration: 1.3, ease: [0.16, 1, 0.3, 1] }}
           style={{
             ...(reduceMotion ? {} : { rotateX, rotateY, x: shiftX }),
-            height: 'min(78vh, 54rem)',
             aspectRatio: '2 / 3',
           }}
-          className="relative [transform-style:preserve-3d]"
+          className="relative h-[min(40svh,22rem)] [transform-style:preserve-3d] lg:h-[min(78vh,54rem)]"
         >
           <Image
             src="/brand/elodia-botella.png"
             alt="Botella de Tequila ELODIA Añejo, vidrio negro con filigrana dorada"
             fill
             priority
-            sizes="(min-width: 1024px) 40vw, 0px"
+            sizes="(min-width: 1024px) 40vw, 60vw"
             className="object-contain drop-shadow-[0_40px_60px_rgb(0_0_0/0.8)]"
           />
           <div

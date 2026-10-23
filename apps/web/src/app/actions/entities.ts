@@ -21,6 +21,7 @@ function explain(error: { code?: string; message: string }): string {
   if (error.code === '23505') return 'Ya existe un registro con esos datos.';
   if (error.code === '23503') return 'Este registro está ligado a otros y no se puede quitar así.';
   if (error.code === '23514') return 'Alguno de los valores no es válido.';
+  if (error.code === 'P0001') return error.message;
   return 'No se pudo guardar. Inténtalo de nuevo.';
 }
 
@@ -31,6 +32,7 @@ const paths: Record<string, string[]> = {
   activities: ['/actividades', '/'],
   territories: ['/territorios'],
   distributors: ['/distribuidores', '/'],
+  content_items: ['/calendario', '/aprobaciones'],
 };
 
 export async function saveRow(key: string, id: string | null, input: unknown): Promise<SaveResult> {

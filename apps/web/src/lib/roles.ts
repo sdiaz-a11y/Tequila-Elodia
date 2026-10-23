@@ -22,3 +22,9 @@ export const canRead = (u: Pick<SessionUser, 'roles'>) => has(u, READ);
 export const canWrite = (u: Pick<SessionUser, 'roles'>) => has(u, WRITE);
 export const canManage = (u: Pick<SessionUser, 'roles'>) => has(u, MANAGE);
 export const canAdmin = (u: Pick<SessionUser, 'roles'>) => has(u, ADMIN);
+
+/** Mirrors can_content / can_approve: who edits content, and who approves it or marks assets as official. */
+const CONTENT = ['tech_superadmin', 'director_vp', 'ops_admin', 'sales_manager', 'marketing'];
+const APPROVE = ['tech_superadmin', 'director_vp', 'ops_admin'];
+export const canContent = (u: Pick<SessionUser, 'roles'>) => has(u, CONTENT);
+export const canApprove = (u: Pick<SessionUser, 'roles'>) => has(u, APPROVE);

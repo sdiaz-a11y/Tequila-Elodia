@@ -145,7 +145,7 @@ export function EntityManager({
   }
 
   return (
-    <div className="grid gap-4">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-4">
       <div className="flex flex-wrap items-center gap-3">
         {def.search.length ? (
           <div className="relative min-w-56 flex-1 sm:max-w-xs">

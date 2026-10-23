@@ -39,6 +39,10 @@ describe('navigation', () => {
       '/actividades',
       '/distribuidores',
       '/territorios',
+      '/brand-kit',
+      '/calendario',
+      '/biblioteca',
+      '/aprobaciones',
       '/equipo',
       '/auditoria',
     ]);

@@ -127,7 +127,7 @@ export function TeamPanel({
   }
 
   return (
-    <div className="grid gap-4">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-4">
       {canEdit ? (
         <div className="flex">
           <Button

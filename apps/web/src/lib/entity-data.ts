@@ -51,6 +51,7 @@ const RELATIONS: Record<
   profiles: { table: 'profiles', label: 'name', order: 'name', only: 'active' },
   stages: { table: 'pipeline_stages', label: 'name', order: 'position' },
   opportunities: { table: 'opportunities', label: 'title', order: 'title' },
+  assets: { table: 'brand_assets', label: 'title', order: 'title' },
 };
 
 /** Choices for relation fields (company, owner, stage…). Capped: very large lists need a search box later. */

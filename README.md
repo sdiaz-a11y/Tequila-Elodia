@@ -7,11 +7,12 @@ Una sola aplicación Next.js (`apps/web`) con **Supabase** (inicio de sesión + 
 
 - **Comercial**: empresas y prospectos, contactos, pipeline por etapas, actividades, territorios, distribuidores.
 - **Dashboard** con cifras reales (vacío mientras no haya datos).
+- **Contenido (sin IA)**: Brand Kit (paleta, tipografías, tono, mensajes y restricciones), biblioteca multimedia con archivos privados, calendario editorial y aprobaciones. Nada se publica sin revisión humana y, para aprobar, quien aprueba confirma la revisión de la normativa de publicidad de bebidas alcohólicas (la plataforma no valida ese cumplimiento).
 - **Equipo**: alta de usuarios con contraseña temporal de un solo uso, roles, deshabilitar y restablecer.
 - **Auditoría**: cada alta, cambio y borrado queda registrado por la base de datos y no se puede editar.
 - Marca y diseño: `docs/brand-reference.json`, `assets/brand/official/`.
 
-Pendiente (aparece en el menú como "Próximamente"): contenido y calendario editorial, marketing, cotizaciones y pedidos, productos e inventario, finanzas, proyectos, cumplimiento, BI, asistente IA, automatizaciones.
+Pendiente (aparece en el menú como "Próximamente"): Content Studio con IA, campañas y redes sociales, cotizaciones y pedidos, productos e inventario, finanzas, proyectos, cumplimiento, BI, asistente IA, automatizaciones.
 
 ## Cómo funciona la seguridad
 
@@ -27,6 +28,7 @@ pnpm install
 #   SUPABASE_SECRET_KEY=...        (solo servidor: crea usuarios desde Equipo)
 # .env en la raíz: DIRECT_URL=...  (conexión directa a Postgres, solo para migraciones)
 node scripts/db-apply.mjs          # aplica supabase/migrations a la base
+node scripts/seed-brand-assets.mjs # sube las imágenes oficiales de assets/brand/official (una vez)
 pnpm dev                           # http://localhost:3000
 pnpm lint && pnpm typecheck && pnpm test && pnpm build
 ```

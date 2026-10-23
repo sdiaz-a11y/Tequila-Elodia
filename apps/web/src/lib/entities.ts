@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { CHANNELS, FORMATS } from '@/lib/content';
 
 /**
  * Declarative description of every commercial entity. Plain data (no functions) so it can cross the
@@ -17,7 +18,8 @@ export type FieldType =
   | 'url'
   | 'checkbox';
 
-export type RelationKey = 'accounts' | 'territories' | 'profiles' | 'stages' | 'opportunities';
+export type RelationKey =
+  'accounts' | 'territories' | 'profiles' | 'stages' | 'opportunities' | 'assets';
 
 export interface Option {
   value: string;
@@ -64,7 +66,13 @@ export interface EntityDef {
 }
 
 export type EntityKey =
-  'accounts' | 'contacts' | 'opportunities' | 'activities' | 'territories' | 'distributors';
+  | 'accounts'
+  | 'contacts'
+  | 'opportunities'
+  | 'activities'
+  | 'territories'
+  | 'distributors'
+  | 'content_items';
 
 const opts = (...pairs: [string, string][]): Option[] =>
   pairs.map(([value, label]) => ({ value, label }));
@@ -99,6 +107,38 @@ export const DISTRIBUTOR_STATUS = opts(
 );
 
 export const ENTITIES: Record<EntityKey, EntityDef> = {
+  content_items: {
+    key: 'content_items',
+    table: 'content_items',
+    singular: 'contenido',
+    plural: 'Calendario editorial',
+    isFeminine: false,
+    select:
+      '*, asset:brand_assets!asset_id(title,storage_path,mime), owner:profiles!owner_id(name)',
+    search: ['title'],
+    order: { column: 'scheduled_at', ascending: true },
+    filters: [],
+    fields: [
+      { name: 'title', label: 'Título', type: 'text', required: true },
+      { name: 'channel', label: 'Canal', type: 'select', required: true, options: CHANNELS },
+      { name: 'format', label: 'Formato', type: 'select', required: true, options: FORMATS },
+      {
+        name: 'status',
+        label: 'Estado inicial',
+        type: 'select',
+        required: true,
+        lockOnEdit: true,
+        options: opts(['idea', 'Idea'], ['draft', 'Borrador'], ['in_review', 'Enviar a revisión']),
+      },
+      { name: 'scheduled_at', label: 'Fecha y hora de publicación', type: 'datetime' },
+      { name: 'asset_id', label: 'Archivo de la biblioteca', type: 'relation', relation: 'assets' },
+      { name: 'owner_id', label: 'Responsable', type: 'relation', relation: 'profiles' },
+      { name: 'copy', label: 'Texto de la publicación', type: 'textarea' },
+      { name: 'notes', label: 'Notas internas', type: 'textarea' },
+    ],
+    columns: [],
+    empty: { title: 'Sin contenido', description: 'Planea tu primera publicación.' },
+  },
   accounts: {
     key: 'accounts',
     table: 'accounts',
