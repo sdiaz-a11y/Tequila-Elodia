@@ -9,7 +9,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src",
     "test": "vitest run",
-    "create-user": "tsx src/cli/create-user.ts"
+    "create-user": "tsx src/cli/create-user.ts",
+    "reset-password": "tsx src/cli/reset-password.ts"
   },
   "dependencies": {
     "@elodia/database": "workspace:*",
