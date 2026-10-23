@@ -1,11 +1,20 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { ArrowUpRight, CalendarClock, Handshake, Target, Truck, TriangleAlert } from 'lucide-react';
+import {
+  ArrowUpRight,
+  CalendarClock,
+  Handshake,
+  ListChecks,
+  Megaphone,
+  Target,
+  Truck,
+  TriangleAlert,
+} from 'lucide-react';
 import { StarDivider } from '@/components/brand/star-divider';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
-import { formatDateTime, formatMoney, isOverdue } from '@/lib/format';
+import { dayInDays, formatDateTime, formatMoney, isOverdue } from '@/lib/format';
 import { canRead } from '@/lib/roles';
 import { getSessionUser } from '@/lib/session';
 import { createSupabase } from '@/lib/supabase/server';
@@ -31,6 +40,9 @@ export default async function DashboardPage() {
     wonValue: number;
     pending: number;
     overdue: number;
+    openTasks: number;
+    activeCampaigns: number;
+    expiringDocs: number;
     upcoming: {
       id: string;
       subject: string;
@@ -50,6 +62,9 @@ export default async function DashboardPage() {
       activeDistributors,
       pending,
       overdue,
+      openTasks,
+      activeCampaigns,
+      expiringDocs,
       stagesRes,
       oppsRes,
       upcoming,
@@ -69,6 +84,15 @@ export default async function DashboardPage() {
           .select('id', head)
           .is('done_at', null)
           .lt('due_at', new Date().toISOString()),
+      ),
+      count(supabase.from('tasks').select('id', head).neq('status', 'done')),
+      count(supabase.from('campaigns').select('id', head).eq('status', 'active')),
+      count(
+        supabase
+          .from('compliance_documents')
+          .select('id', head)
+          .not('expires_on', 'is', null)
+          .lte('expires_on', dayInDays(30)),
       ),
       supabase.from('pipeline_stages').select('id,name,kind').order('position'),
       supabase.from('opportunities').select('stage_id,amount').limit(2000),
@@ -102,6 +126,9 @@ export default async function DashboardPage() {
       wonValue: sum('won').reduce((t, s) => t + s.sum, 0),
       pending,
       overdue,
+      openTasks,
+      activeCampaigns,
+      expiringDocs,
       upcoming: (upcoming.data ?? []) as unknown as NonNullable<typeof stats>['upcoming'],
       stages,
     };
@@ -130,7 +157,7 @@ export default async function DashboardPage() {
         </Card>
       ) : (
         <>
-          <section aria-label="Indicadores" className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <section aria-label="Indicadores" className="grid grid-cols-2 gap-4 lg:grid-cols-3">
             <Kpi
               icon={Handshake}
               label="Prospectos"
@@ -157,7 +184,36 @@ export default async function DashboardPage() {
               hint={`${stats.openCount} oportunidades`}
               href="/pipeline"
             />
+            <Kpi
+              icon={ListChecks}
+              label="Tareas abiertas"
+              value={String(stats.openTasks)}
+              hint="Ver tablero"
+              href="/tareas"
+            />
+            <Kpi
+              icon={Megaphone}
+              label="Campañas activas"
+              value={String(stats.activeCampaigns)}
+              hint="Ver campañas"
+              href="/campanas"
+            />
           </section>
+
+          {stats.expiringDocs > 0 ? (
+            <Link
+              href="/cumplimiento"
+              className="flex items-center justify-between gap-3 rounded-panel border border-warning/30 bg-warning/10 px-5 py-4 text-sm text-warning transition-colors hover:bg-warning/15"
+            >
+              <span className="flex items-center gap-2.5">
+                <TriangleAlert className="size-4 shrink-0" aria-hidden />
+                {stats.expiringDocs}{' '}
+                {stats.expiringDocs === 1 ? 'documento vence' : 'documentos vencen'} en los próximos
+                30 días o ya {stats.expiringDocs === 1 ? 'venció' : 'vencieron'}.
+              </span>
+              <ArrowUpRight className="size-4 shrink-0" aria-hidden />
+            </Link>
+          ) : null}
 
           {nothingYet ? (
             <Card>

@@ -115,7 +115,7 @@ export function AppShell({
       </Dialog>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex h-[var(--header-height)] shrink-0 items-center gap-3 border-b border-line bg-background/85 px-4 backdrop-blur-md sm:px-6">
+        <header className="sticky top-0 z-30 flex h-[var(--header-height)] shrink-0 items-center gap-1.5 border-b border-line bg-background/85 px-3 backdrop-blur-md sm:gap-3 sm:px-6">
           <Button
             variant="ghost"
             size="icon"
@@ -126,7 +126,7 @@ export function AppShell({
             <Menu aria-hidden />
           </Button>
           <Breadcrumbs />
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-0.5 sm:gap-2">
             <button
               type="button"
               onClick={() => setCommandOpen(true)}
@@ -153,7 +153,9 @@ export function AppShell({
                 <PeriodSelect />
               </Suspense>
             ) : null}
-            <Notifications />
+            <div className="hidden sm:block">
+              <Notifications />
+            </div>
             <UserMenu user={user} onSignOut={signOut} />
           </div>
         </header>

@@ -52,6 +52,9 @@ const RELATIONS: Record<
   stages: { table: 'pipeline_stages', label: 'name', order: 'position' },
   opportunities: { table: 'opportunities', label: 'title', order: 'title' },
   assets: { table: 'brand_assets', label: 'title', order: 'title' },
+  projects: { table: 'projects', label: 'name', order: 'name' },
+  products: { table: 'products', label: 'name', order: 'name' },
+  campaigns: { table: 'campaigns', label: 'name', order: 'name' },
 };
 
 /** Choices for relation fields (company, owner, stage…). Capped: very large lists need a search box later. */

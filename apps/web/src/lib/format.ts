@@ -37,3 +37,13 @@ export function isOverdue(
 ): boolean {
   return Boolean(iso && !doneAt && new Date(iso).getTime() < Date.now());
 }
+
+/** Whole days from now until a calendar day (`YYYY-MM-DD`); negative when it already passed. */
+export function daysUntil(day: string): number {
+  return Math.ceil((new Date(`${day.slice(0, 10)}T12:00:00`).getTime() - Date.now()) / 86_400_000);
+}
+
+/** The calendar day (`YYYY-MM-DD`, UTC) that is `n` days from now. */
+export function dayInDays(n: number): string {
+  return new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
+}

@@ -33,6 +33,13 @@ const paths: Record<string, string[]> = {
   territories: ['/territorios'],
   distributors: ['/distribuidores', '/'],
   content_items: ['/calendario', '/aprobaciones'],
+  projects: ['/proyectos', '/tareas'],
+  tasks: ['/tareas', '/'],
+  products: ['/productos', '/presentaciones'],
+  variants: ['/presentaciones'],
+  campaigns: ['/campanas', '/calendario'],
+  compliance_documents: ['/cumplimiento', '/'],
+  transactions: ['/finanzas'],
 };
 
 export async function saveRow(key: string, id: string | null, input: unknown): Promise<SaveResult> {
@@ -121,6 +128,28 @@ export async function setActivityDone(id: string, done: boolean): Promise<SaveRe
   if (error) return { ok: false, error: explain(error) };
   if (!data?.length) return { ok: false, error: 'No tienes permiso para cambiar esta actividad.' };
   revalidatePath('/actividades');
+  revalidatePath('/');
+  return { ok: true };
+}
+
+const TASK_STATUSES = ['todo', 'doing', 'blocked', 'done'] as const;
+
+export async function moveTask(id: string, status: string): Promise<SaveResult> {
+  const parsed = z
+    .object({ id: z.uuid(), status: z.enum(TASK_STATUSES) })
+    .safeParse({ id, status });
+  if (!parsed.success) return { ok: false, error: 'Solicitud inválida.' };
+  if (!(await getSessionUser()))
+    return { ok: false, error: 'Tu sesión expiró. Inicia sesión de nuevo.' };
+  const supabase = await createSupabase();
+  const { data, error } = await supabase
+    .from('tasks')
+    .update({ status: parsed.data.status })
+    .eq('id', parsed.data.id)
+    .select('id');
+  if (error) return { ok: false, error: explain(error) };
+  if (!data?.length) return { ok: false, error: 'No tienes permiso para mover esta tarea.' };
+  revalidatePath('/tareas');
   revalidatePath('/');
   return { ok: true };
 }

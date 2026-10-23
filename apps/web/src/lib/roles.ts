@@ -28,3 +28,36 @@ const CONTENT = ['tech_superadmin', 'director_vp', 'ops_admin', 'sales_manager',
 const APPROVE = ['tech_superadmin', 'director_vp', 'ops_admin'];
 export const canContent = (u: Pick<SessionUser, 'roles'>) => has(u, CONTENT);
 export const canApprove = (u: Pick<SessionUser, 'roles'>) => has(u, APPROVE);
+
+const OPS = [
+  'tech_superadmin',
+  'director_vp',
+  'ops_admin',
+  'sales_manager',
+  'marketing',
+  'operations',
+];
+export const canOps = (u: Pick<SessionUser, 'roles'>) => has(u, OPS);
+
+/** Who may create/edit and who may delete, per entity. Mirrors the RLS policies in supabase/migrations. */
+export function entityPermissions(
+  user: Pick<SessionUser, 'roles'>,
+  key: string,
+): { read: boolean; write: boolean; remove: boolean } {
+  if (key === 'transactions') {
+    const ok = canFinance(user);
+    return { read: ok, write: ok, remove: ok };
+  }
+  if (key === 'compliance_documents')
+    return { read: canRead(user), write: canCompliance(user), remove: canApprove(user) };
+  const read = canRead(user);
+  if (key === 'projects' || key === 'products' || key === 'variants')
+    return { read, write: canOps(user), remove: canManage(user) };
+  if (key === 'campaigns') return { read, write: canContent(user), remove: canApprove(user) };
+  return { read, write: canWrite(user), remove: canManage(user) };
+}
+
+const FINANCE = ['tech_superadmin', 'director_vp', 'ops_admin', 'finance'];
+const COMPLIANCE = ['tech_superadmin', 'director_vp', 'ops_admin', 'operations'];
+export const canFinance = (u: Pick<SessionUser, 'roles'>) => has(u, FINANCE);
+export const canCompliance = (u: Pick<SessionUser, 'roles'>) => has(u, COMPLIANCE);

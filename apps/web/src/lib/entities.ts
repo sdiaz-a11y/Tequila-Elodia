@@ -19,7 +19,15 @@ export type FieldType =
   | 'checkbox';
 
 export type RelationKey =
-  'accounts' | 'territories' | 'profiles' | 'stages' | 'opportunities' | 'assets';
+  | 'accounts'
+  | 'territories'
+  | 'profiles'
+  | 'stages'
+  | 'opportunities'
+  | 'assets'
+  | 'projects'
+  | 'products'
+  | 'campaigns';
 
 export interface Option {
   value: string;
@@ -34,6 +42,11 @@ export interface Field {
   options?: readonly Option[];
   relation?: RelationKey;
   hint?: string;
+  /** Whole numbers only (e.g. millilitres). */
+  integer?: boolean;
+  max?: number;
+  /** Value used when a numeric field is left blank (for columns that cannot be null, like a budget). */
+  blankAs?: number;
   /** Left out of the form when editing (identity of the row, e.g. the company of a distributor). */
   lockOnEdit?: boolean;
 }
@@ -42,7 +55,7 @@ export interface Column {
   /** Dot path into the row, e.g. `owner.name`. */
   path: string;
   label: string;
-  as?: 'text' | 'badge' | 'money' | 'date' | 'datetime' | 'bool';
+  as?: 'text' | 'badge' | 'money' | 'date' | 'datetime' | 'bool' | 'expiry';
   /** Maps a raw value to a label (and tone for badges). */
   options?: readonly Option[];
 }
@@ -72,7 +85,14 @@ export type EntityKey =
   | 'activities'
   | 'territories'
   | 'distributors'
-  | 'content_items';
+  | 'content_items'
+  | 'projects'
+  | 'tasks'
+  | 'products'
+  | 'variants'
+  | 'campaigns'
+  | 'compliance_documents'
+  | 'transactions';
 
 const opts = (...pairs: [string, string][]): Option[] =>
   pairs.map(([value, label]) => ({ value, label }));
@@ -106,7 +126,329 @@ export const DISTRIBUTOR_STATUS = opts(
   ['terminated', 'Terminado'],
 );
 
+export const PROJECT_STATUS = opts(
+  ['active', 'Activo'],
+  ['paused', 'En pausa'],
+  ['done', 'Terminado'],
+  ['cancelled', 'Cancelado'],
+);
+export const TASK_STATUS = opts(
+  ['todo', 'Por hacer'],
+  ['doing', 'En curso'],
+  ['blocked', 'Bloqueada'],
+  ['done', 'Hecha'],
+);
+export const TASK_PRIORITY = opts(
+  ['low', 'Baja'],
+  ['medium', 'Media'],
+  ['high', 'Alta'],
+  ['urgent', 'Urgente'],
+);
+const PRODUCT_STATUS = opts(['draft', 'Borrador'], ['active', 'Activo'], ['inactive', 'Inactivo']);
+const CAMPAIGN_STATUS = opts(
+  ['planned', 'Planeada'],
+  ['active', 'Activa'],
+  ['paused', 'En pausa'],
+  ['done', 'Terminada'],
+);
+
+export const DOC_CATEGORIES = opts(
+  ['brand', 'Marca'],
+  ['product', 'Producto'],
+  ['contract', 'Contrato'],
+  ['permit', 'Permiso'],
+  ['certificate', 'Certificado'],
+  ['other', 'Otro'],
+);
+export const DOC_STATUS = opts(
+  ['draft', 'Borrador'],
+  ['in_review', 'En revisión'],
+  ['approved', 'Aprobado'],
+);
+const TX_KINDS = opts(['income', 'Ingreso'], ['expense', 'Egreso']);
+
 export const ENTITIES: Record<EntityKey, EntityDef> = {
+  compliance_documents: {
+    key: 'compliance_documents',
+    table: 'compliance_documents',
+    singular: 'documento',
+    plural: 'Documentación y cumplimiento',
+    isFeminine: false,
+    select:
+      '*, product:products!product_id(name), account:accounts!account_id(name), asset:brand_assets!asset_id(title)',
+    search: ['title'],
+    order: { column: 'expires_on', ascending: true },
+    filters: [
+      { name: 'category', label: 'Todas las categorías', options: DOC_CATEGORIES },
+      { name: 'status', label: 'Todos los estados', options: DOC_STATUS },
+    ],
+    fields: [
+      { name: 'title', label: 'Documento', type: 'text', required: true },
+      {
+        name: 'category',
+        label: 'Categoría',
+        type: 'select',
+        required: true,
+        options: DOC_CATEGORIES,
+      },
+      {
+        name: 'status',
+        label: 'Estado inicial',
+        type: 'select',
+        required: true,
+        lockOnEdit: true,
+        options: opts(['draft', 'Borrador'], ['in_review', 'Enviar a revisión']),
+      },
+      { name: 'expires_on', label: 'Vence el', type: 'date', hint: 'Déjalo vacío si no caduca.' },
+      {
+        name: 'asset_id',
+        label: 'Archivo (sube el PDF en la biblioteca)',
+        type: 'relation',
+        relation: 'assets',
+      },
+      { name: 'product_id', label: 'Producto relacionado', type: 'relation', relation: 'products' },
+      {
+        name: 'account_id',
+        label: 'Empresa o proveedor relacionado',
+        type: 'relation',
+        relation: 'accounts',
+      },
+      { name: 'notes', label: 'Notas', type: 'textarea' },
+    ],
+    columns: [
+      { path: 'title', label: 'Documento' },
+      { path: 'category', label: 'Categoría', as: 'badge', options: DOC_CATEGORIES },
+      { path: 'status', label: 'Estado', as: 'badge', options: DOC_STATUS },
+      { path: 'expires_on', label: 'Vence', as: 'expiry' },
+      { path: 'product.name', label: 'Producto' },
+    ],
+    empty: {
+      title: 'Aún no hay documentos',
+      description:
+        'Registra permisos, certificados y contratos con su fecha de vencimiento. Una persona autorizada los aprueba.',
+    },
+  },
+  transactions: {
+    key: 'transactions',
+    table: 'transactions',
+    singular: 'movimiento',
+    plural: 'Finanzas',
+    isFeminine: false,
+    select: '*, account:accounts!account_id(name), campaign:campaigns!campaign_id(name)',
+    search: ['category', 'description'],
+    order: { column: 'occurred_on', ascending: false },
+    filters: [{ name: 'kind', label: 'Ingresos y egresos', options: TX_KINDS }],
+    fields: [
+      { name: 'kind', label: 'Tipo', type: 'select', required: true, options: TX_KINDS },
+      {
+        name: 'category',
+        label: 'Categoría',
+        type: 'text',
+        required: true,
+        hint: 'Por ejemplo: ventas, publicidad, producción, logística.',
+      },
+      { name: 'amount', label: 'Monto (MXN)', type: 'number', required: true },
+      { name: 'occurred_on', label: 'Fecha', type: 'date', required: true },
+      { name: 'description', label: 'Descripción', type: 'text' },
+      { name: 'account_id', label: 'Empresa relacionada', type: 'relation', relation: 'accounts' },
+      {
+        name: 'campaign_id',
+        label: 'Campaña relacionada',
+        type: 'relation',
+        relation: 'campaigns',
+      },
+      { name: 'notes', label: 'Notas', type: 'textarea' },
+    ],
+    columns: [
+      { path: 'occurred_on', label: 'Fecha', as: 'date' },
+      { path: 'kind', label: 'Tipo', as: 'badge', options: TX_KINDS },
+      { path: 'category', label: 'Categoría' },
+      { path: 'amount', label: 'Monto', as: 'money' },
+      { path: 'account.name', label: 'Empresa' },
+      { path: 'description', label: 'Descripción' },
+    ],
+    empty: {
+      title: 'Aún no hay movimientos',
+      description: 'Registra ingresos y egresos para ver el balance del mes.',
+    },
+  },
+  projects: {
+    key: 'projects',
+    table: 'projects',
+    singular: 'proyecto',
+    plural: 'Proyectos',
+    isFeminine: false,
+    select: '*, owner:profiles!owner_id(name)',
+    search: ['name'],
+    order: { column: 'created_at', ascending: false },
+    filters: [{ name: 'status', label: 'Todos los estados', options: PROJECT_STATUS }],
+    fields: [
+      { name: 'name', label: 'Nombre', type: 'text', required: true },
+      { name: 'status', label: 'Estado', type: 'select', required: true, options: PROJECT_STATUS },
+      { name: 'owner_id', label: 'Responsable', type: 'relation', relation: 'profiles' },
+      { name: 'starts_on', label: 'Inicio', type: 'date' },
+      { name: 'due_on', label: 'Fecha límite', type: 'date' },
+      { name: 'description', label: 'Descripción', type: 'textarea' },
+    ],
+    columns: [
+      { path: 'name', label: 'Proyecto' },
+      { path: 'status', label: 'Estado', as: 'badge', options: PROJECT_STATUS },
+      { path: 'owner.name', label: 'Responsable' },
+      { path: 'due_on', label: 'Fecha límite', as: 'date' },
+    ],
+    empty: {
+      title: 'Aún no hay proyectos',
+      description: 'Agrupa el trabajo del equipo en proyectos con responsable y fecha límite.',
+    },
+  },
+  tasks: {
+    key: 'tasks',
+    table: 'tasks',
+    singular: 'tarea',
+    plural: 'Tareas',
+    isFeminine: true,
+    select: '*, project:projects!project_id(name), assignee:profiles!assignee_id(name)',
+    search: ['title'],
+    order: { column: 'due_on', ascending: true },
+    filters: [],
+    fields: [
+      { name: 'title', label: 'Tarea', type: 'text', required: true },
+      { name: 'project_id', label: 'Proyecto', type: 'relation', relation: 'projects' },
+      { name: 'status', label: 'Estado', type: 'select', required: true, options: TASK_STATUS },
+      {
+        name: 'priority',
+        label: 'Prioridad',
+        type: 'select',
+        required: true,
+        options: TASK_PRIORITY,
+      },
+      { name: 'assignee_id', label: 'Responsable', type: 'relation', relation: 'profiles' },
+      { name: 'due_on', label: 'Fecha límite', type: 'date' },
+      { name: 'description', label: 'Detalle', type: 'textarea' },
+    ],
+    columns: [],
+    empty: { title: 'Sin tareas', description: 'Crea la primera tarea del equipo.' },
+  },
+  products: {
+    key: 'products',
+    table: 'products',
+    singular: 'producto',
+    plural: 'Productos',
+    isFeminine: false,
+    select: '*',
+    search: ['name', 'category'],
+    order: { column: 'name', ascending: true },
+    filters: [{ name: 'status', label: 'Todos los estados', options: PRODUCT_STATUS }],
+    fields: [
+      { name: 'name', label: 'Nombre del producto', type: 'text', required: true },
+      { name: 'category', label: 'Categoría', type: 'text' },
+      { name: 'status', label: 'Estado', type: 'select', required: true, options: PRODUCT_STATUS },
+      { name: 'description', label: 'Descripción', type: 'textarea' },
+      { name: 'notes', label: 'Notas', type: 'textarea' },
+    ],
+    columns: [
+      { path: 'name', label: 'Producto' },
+      { path: 'category', label: 'Categoría' },
+      { path: 'status', label: 'Estado', as: 'badge', options: PRODUCT_STATUS },
+    ],
+    empty: {
+      title: 'Aún no hay productos',
+      description: 'Registra tus productos y después sus presentaciones (SKU) con precio y costo.',
+    },
+  },
+  variants: {
+    key: 'variants',
+    table: 'product_variants',
+    singular: 'presentación',
+    plural: 'Presentaciones y SKU',
+    isFeminine: true,
+    select: '*, product:products!product_id(name)',
+    search: ['sku', 'presentation'],
+    order: { column: 'sku', ascending: true },
+    filters: [
+      {
+        name: 'status',
+        label: 'Todos los estados',
+        options: opts(['active', 'Activa'], ['inactive', 'Inactiva']),
+      },
+    ],
+    fields: [
+      {
+        name: 'product_id',
+        label: 'Producto',
+        type: 'relation',
+        relation: 'products',
+        required: true,
+      },
+      { name: 'sku', label: 'SKU', type: 'text', required: true },
+      { name: 'presentation', label: 'Presentación', type: 'text', required: true },
+      { name: 'volume_ml', label: 'Volumen (ml)', type: 'number', integer: true },
+      { name: 'abv', label: 'Graduación alcohólica (% Alc. Vol.)', type: 'number', max: 100 },
+      { name: 'price', label: 'Precio de lista (MXN)', type: 'number' },
+      { name: 'cost', label: 'Costo (MXN)', type: 'number' },
+      {
+        name: 'status',
+        label: 'Estado',
+        type: 'select',
+        required: true,
+        options: opts(['active', 'Activa'], ['inactive', 'Inactiva']),
+      },
+      {
+        name: 'verified',
+        label: 'Datos verificados contra la etiqueta oficial',
+        type: 'checkbox',
+      },
+      { name: 'notes', label: 'Notas', type: 'textarea' },
+    ],
+    columns: [
+      { path: 'sku', label: 'SKU' },
+      { path: 'product.name', label: 'Producto' },
+      { path: 'presentation', label: 'Presentación' },
+      { path: 'volume_ml', label: 'ml' },
+      { path: 'price', label: 'Precio', as: 'money' },
+      { path: 'verified', label: 'Verificado', as: 'bool' },
+    ],
+    empty: {
+      title: 'Aún no hay presentaciones',
+      description:
+        'Cada presentación (por ejemplo, botella de 750 ml) lleva su SKU, precio y costo.',
+    },
+  },
+  campaigns: {
+    key: 'campaigns',
+    table: 'campaigns',
+    singular: 'campaña',
+    plural: 'Campañas',
+    isFeminine: true,
+    select: '*, owner:profiles!owner_id(name)',
+    search: ['name'],
+    order: { column: 'created_at', ascending: false },
+    filters: [{ name: 'status', label: 'Todos los estados', options: CAMPAIGN_STATUS }],
+    fields: [
+      { name: 'name', label: 'Nombre', type: 'text', required: true },
+      { name: 'status', label: 'Estado', type: 'select', required: true, options: CAMPAIGN_STATUS },
+      { name: 'objective', label: 'Objetivo', type: 'textarea' },
+      { name: 'budget', label: 'Presupuesto (MXN)', type: 'number', blankAs: 0 },
+      { name: 'spent', label: 'Gastado (MXN)', type: 'number', blankAs: 0 },
+      { name: 'starts_on', label: 'Inicio', type: 'date' },
+      { name: 'ends_on', label: 'Fin', type: 'date' },
+      { name: 'owner_id', label: 'Responsable', type: 'relation', relation: 'profiles' },
+      { name: 'results', label: 'Resultados', type: 'textarea' },
+    ],
+    columns: [
+      { path: 'name', label: 'Campaña' },
+      { path: 'status', label: 'Estado', as: 'badge', options: CAMPAIGN_STATUS },
+      { path: 'budget', label: 'Presupuesto', as: 'money' },
+      { path: 'spent', label: 'Gastado', as: 'money' },
+      { path: 'ends_on', label: 'Fin', as: 'date' },
+      { path: 'owner.name', label: 'Responsable' },
+    ],
+    empty: {
+      title: 'Aún no hay campañas',
+      description:
+        'Planea campañas con objetivo, presupuesto y resultados, y liga a ellas tu contenido.',
+    },
+  },
   content_items: {
     key: 'content_items',
     table: 'content_items',
@@ -132,6 +474,7 @@ export const ENTITIES: Record<EntityKey, EntityDef> = {
       },
       { name: 'scheduled_at', label: 'Fecha y hora de publicación', type: 'datetime' },
       { name: 'asset_id', label: 'Archivo de la biblioteca', type: 'relation', relation: 'assets' },
+      { name: 'campaign_id', label: 'Campaña', type: 'relation', relation: 'campaigns' },
       { name: 'owner_id', label: 'Responsable', type: 'relation', relation: 'profiles' },
       { name: 'copy', label: 'Texto de la publicación', type: 'textarea' },
       { name: 'notes', label: 'Notas internas', type: 'textarea' },
@@ -241,7 +584,7 @@ export const ENTITIES: Record<EntityKey, EntityDef> = {
         required: true,
       },
       { name: 'stage_id', label: 'Etapa', type: 'relation', relation: 'stages', required: true },
-      { name: 'amount', label: 'Monto estimado (MXN)', type: 'number' },
+      { name: 'amount', label: 'Monto estimado (MXN)', type: 'number', blankAs: 0 },
       { name: 'expected_close', label: 'Cierre esperado', type: 'date' },
       { name: 'owner_id', label: 'Responsable', type: 'relation', relation: 'profiles' },
       { name: 'lost_reason', label: 'Motivo si se pierde', type: 'text' },
@@ -369,8 +712,13 @@ export function schemaFor(def: EntityDef, mode: 'create' | 'edit' = 'create') {
   const blank = (v: unknown) => (typeof v === 'string' && v.trim() === '' ? null : v);
   const base = (f: Field): z.ZodType => {
     switch (f.type) {
-      case 'number':
-        return z.coerce.number().min(0, 'No puede ser negativo').max(1e12);
+      case 'number': {
+        const n = z.coerce
+          .number()
+          .min(0, 'No puede ser negativo')
+          .max(f.max ?? 1e12, `No puede ser mayor a ${f.max ?? 1e12}`);
+        return f.integer ? n.int('Usa un número entero') : n;
+      }
       case 'email':
         return z.email('Correo inválido').max(254);
       case 'url':
@@ -394,12 +742,14 @@ export function schemaFor(def: EntityDef, mode: 'create' | 'edit' = 'create') {
     if (f.type === 'checkbox') shape[f.name] = z.boolean().default(false);
     else if (f.type === 'select')
       shape[f.name] = z.enum((f.options ?? []).map((o) => o.value) as [string, ...string[]]);
+    else if (f.type === 'number' && f.blankAs !== undefined)
+      shape[f.name] = z.preprocess((v) => (blank(v) === null ? f.blankAs : v), base(f)).optional();
     else if (f.required)
       shape[f.name] = z.preprocess(
         blank,
         z.union([z.null(), base(f)]).refine((v) => v !== null, 'Obligatorio'),
       );
-    else shape[f.name] = z.preprocess(blank, base(f).nullable());
+    else shape[f.name] = z.preprocess(blank, base(f).nullable()).optional();
   }
   return z.object(shape);
 }

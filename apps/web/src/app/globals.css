@@ -242,3 +242,8 @@ input:-webkit-autofill:focus {
     display: none;
   }
 }
+
+/* The display serif defaults to old-style figures (0 looks like "o", 1 like "I"): data must read clearly. */
+.font-display {
+  font-variant-numeric: lining-nums;
+}

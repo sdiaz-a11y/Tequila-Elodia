@@ -1,7 +1,7 @@
 import { AccessDenied } from '@/components/ui/access-denied';
 import { ENTITIES, type EntityKey } from '@/lib/entities';
 import { listRows, loadRelations, parseListParams, relationKeysOf } from '@/lib/entity-data';
-import { canManage, canRead, canWrite } from '@/lib/roles';
+import { canApprove, entityPermissions } from '@/lib/roles';
 import { getSessionUser } from '@/lib/session';
 import { createSupabase } from '@/lib/supabase/server';
 import { EntityManager } from './entity-manager';
@@ -13,16 +13,21 @@ export async function EntityPage({
   title,
   description,
   searchParams,
+  before,
 }: {
   entityKey: EntityKey;
   group: string;
   title: string;
   description: string;
   searchParams: Record<string, string | string[] | undefined>;
+  /** Optional block shown between the header and the list (e.g. a summary). */
+  before?: React.ReactNode;
 }) {
   const user = await getSessionUser();
-  if (!user || !canRead(user)) return <AccessDenied />;
+  if (!user) return <AccessDenied />;
   const def = ENTITIES[entityKey];
+  const perms = entityPermissions(user, entityKey);
+  if (!perms.read) return <AccessDenied />;
   const params = parseListParams(def, searchParams);
   const supabase = await createSupabase();
   const [{ rows, total }, relations] = await Promise.all([
@@ -37,6 +42,7 @@ export async function EntityPage({
         <h1 className="font-display text-4xl font-semibold tracking-tight text-fg">{title}</h1>
         <p className="max-w-2xl text-sm text-muted">{description}</p>
       </header>
+      {before}
       <EntityManager
         def={def}
         rows={rows}
@@ -45,8 +51,9 @@ export async function EntityPage({
         q={params.q}
         filters={params.filters}
         relations={relations}
-        canWrite={canWrite(user)}
-        canDelete={canManage(user)}
+        canWrite={perms.write}
+        canDelete={perms.remove}
+        canApprove={canApprove(user)}
       />
     </div>
   );

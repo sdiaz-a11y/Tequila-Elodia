@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
+  Check,
+  Send,
   ChevronLeft,
   ChevronRight,
   MoreHorizontal,
@@ -13,6 +15,7 @@ import {
   Inbox,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { transitionDocument } from '@/app/actions/content';
 import { deleteRow, saveRow, setActivityDone } from '@/app/actions/entities';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -34,7 +37,7 @@ import {
   type Option,
   type RelationKey,
 } from '@/lib/entities';
-import { formatDateTime, formatDay, formatMoney, isOverdue } from '@/lib/format';
+import { daysUntil, formatDateTime, formatDay, formatMoney, isOverdue } from '@/lib/format';
 import { EntityFormDialog } from './entity-form-dialog';
 
 const PAGE_SIZE = 20;
@@ -62,6 +65,19 @@ function Cell({ col, row }: { col: Column; row: Row }) {
         </span>
       );
     }
+    case 'expiry': {
+      const days = daysUntil(String(value));
+      return (
+        <span className="tabular inline-flex flex-wrap items-center gap-1.5 whitespace-nowrap">
+          {formatDay(value as string)}
+          {days < 0 ? (
+            <Badge tone="danger">Vencido</Badge>
+          ) : days <= 30 ? (
+            <Badge tone="warning">Vence pronto</Badge>
+          ) : null}
+        </span>
+      );
+    }
     case 'bool':
       return value ? <Badge tone="gold">Sí</Badge> : <span className="text-faint">No</span>;
     default:
@@ -79,6 +95,7 @@ export function EntityManager({
   relations,
   canWrite,
   canDelete,
+  canApprove = false,
 }: {
   def: EntityDef;
   rows: Row[];
@@ -89,6 +106,7 @@ export function EntityManager({
   relations: Partial<Record<RelationKey, Option[]>>;
   canWrite: boolean;
   canDelete: boolean;
+  canApprove?: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -135,6 +153,19 @@ export function EntityManager({
       `${def.singular[0]!.toUpperCase()}${def.singular.slice(1)} eliminad${def.isFeminine ? 'a' : 'o'}`,
     );
     setRemoving(null);
+    router.refresh();
+  }
+
+  async function documentAction(row: Row, action: 'submit' | 'approve' | 'reopen') {
+    const res = await transitionDocument(row.id as string, action);
+    if (!res.ok) return void toast.error(res.error ?? 'No se pudo completar.');
+    toast.success(
+      action === 'approve'
+        ? 'Documento aprobado'
+        : action === 'submit'
+          ? 'Enviado a revisión'
+          : 'Devuelto a borrador',
+    );
     router.refresh();
   }
 
@@ -255,7 +286,25 @@ export function EntityManager({
                               <MoreHorizontal aria-hidden />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent className="w-44">
+                          <DropdownMenuContent className="w-52">
+                            {def.key === 'compliance_documents' &&
+                            canWrite &&
+                            row.status === 'draft' ? (
+                              <DropdownMenuItem onSelect={() => void documentAction(row, 'submit')}>
+                                <Send aria-hidden />
+                                Enviar a revisión
+                              </DropdownMenuItem>
+                            ) : null}
+                            {def.key === 'compliance_documents' &&
+                            canApprove &&
+                            row.status === 'in_review' ? (
+                              <DropdownMenuItem
+                                onSelect={() => void documentAction(row, 'approve')}
+                              >
+                                <Check aria-hidden />
+                                Aprobar documento
+                              </DropdownMenuItem>
+                            ) : null}
                             {canWrite ? (
                               <DropdownMenuItem onSelect={() => setEditing(row)}>
                                 <Pencil aria-hidden />

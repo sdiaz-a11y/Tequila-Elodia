@@ -186,3 +186,25 @@ export async function transitionContent(id: string, input: unknown): Promise<Con
   revalidatePath('/aprobaciones');
   return { ok: true };
 }
+
+/** Compliance documents: a person (never the system) approves them; the database enforces who may. */
+export async function transitionDocument(id: string, action: string): Promise<ContentResult> {
+  const parsed = z
+    .object({ id: z.uuid(), action: z.enum(['submit', 'approve', 'reopen']) })
+    .safeParse({ id, action });
+  if (!parsed.success) return { ok: false, error: 'Solicitud inválida.' };
+  if (!(await requireUser()))
+    return { ok: false, error: 'Tu sesión expiró. Inicia sesión de nuevo.' };
+  const status = { submit: 'in_review', approve: 'approved', reopen: 'draft' }[parsed.data.action];
+  const supabase = await createSupabase();
+  const { data, error } = await supabase
+    .from('compliance_documents')
+    .update({ status })
+    .eq('id', parsed.data.id)
+    .select('id');
+  if (error) return { ok: false, error: explain(error) };
+  if (!data?.length) return { ok: false, error: 'No tienes permiso o el documento ya no existe.' };
+  revalidatePath('/cumplimiento');
+  revalidatePath('/');
+  return { ok: true };
+}

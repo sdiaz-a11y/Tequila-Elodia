@@ -160,7 +160,7 @@ export function EntityFormDialog({
                       {...a11y}
                       invalid={invalid}
                       type={inputType(f)}
-                      step={f.type === 'number' ? '0.01' : undefined}
+                      step={f.type === 'number' ? (f.integer ? '1' : '0.01') : undefined}
                       min={f.type === 'number' ? 0 : undefined}
                       autoComplete="off"
                       value={value}
