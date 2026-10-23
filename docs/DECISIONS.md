@@ -34,6 +34,7 @@ Registro de decisiones técnicas y de producto (ADR ligero). Una fila por decisi
 | D28 | 2026-10-23 | El seed **ya no pisa** los permisos de roles existentes (solo los aplica a roles sin permisos); `--reset-role-grants` o `POST /roles/:id/reset-defaults` los restablecen | Necesario para que la matriz editable sobreviva a un re-seed. Un rol cuyos permisos se vacíen por completo recibiría los valores por defecto en el siguiente seed. | Vigente |
 | D29 | 2026-10-23 | La bitácora se exporta a CSV (máx. 10,000 filas, con BOM UTF-8), con neutralización de fórmulas de hoja de cálculo y la propia exportación auditada | Una exportación es una salida de datos sensibles: queda registrada quién, cuándo y cuántas filas. | Vigente |
 | D30 | 2026-10-23 | Administración requiere alcance `all`: un permiso `own`/`team` sobre usuarios, roles o auditoría se rechaza (en listados de usuarios solo ve la propia cuenta) | No existe un significado claro de "propios" para estos recursos; denegar es más seguro que reinterpretar. | Vigente |
+| D31 | 2026-10-23 | **La API corre en Vercel** (NestJS como funciones), en el mismo proyecto que la web mediante Vercel Services (beta), sin contratar un servidor aparte | Decisión del usuario. Misma origen para la cookie de sesión; la API sigue siendo la única que habla con Supabase (el navegador nunca toca la base). Compromisos: límite de tasa del login por instancia, arranques en frío, plan Pro para uso comercial. Sin probar en Vercel todavía. | Vigente |
 
 ## Notas de fases
 

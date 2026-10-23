@@ -15,6 +15,24 @@ describe('parseEnv', () => {
     expect(() => parseEnv({ WEB_ORIGIN: 'not-a-url' })).toThrow(/WEB_ORIGIN/);
   });
 
+  it('trusts the hosts Vercel assigns to the deployment, without duplicates', () => {
+    const env = parseEnv({
+      WEB_ORIGIN: 'https://elodia.example.com',
+      VERCEL_PROJECT_PRODUCTION_URL: 'elodia-os.vercel.app',
+      VERCEL_URL: 'elodia-os-abc123.vercel.app',
+    });
+    expect(env.WEB_ORIGIN).toEqual([
+      'https://elodia.example.com',
+      'https://elodia-os.vercel.app',
+      'https://elodia-os-abc123.vercel.app',
+    ]);
+    const again = parseEnv({
+      WEB_ORIGIN: 'https://elodia-os.vercel.app',
+      VERCEL_PROJECT_PRODUCTION_URL: 'elodia-os.vercel.app',
+    });
+    expect(again.WEB_ORIGIN).toEqual(['https://elodia-os.vercel.app']);
+  });
+
   it('rejects an invalid port', () => {
     expect(() => parseEnv({ PORT: '99999' })).toThrow(/PORT/);
   });

@@ -64,7 +64,7 @@ Fase 1 tiene 12 sprints; faltan 6. Detalle y criterios en [ROADMAP.md](ROADMAP.m
 1. ~~Correo del VP~~ → `rcastro@zigma3.com` (rol `director_vp`). Falta **crearlo** desde la interfaz (ver sección 2). Política de contraseñas: mínimo 12 caracteres (la contraseña corta de 9 que se propuso se rechazó a propósito).
 2. ~~2FA obligatorio~~ → decidido: **no se usa 2FA** (D19).
    2b. **¿Qué puede administrar el VP?** Por defecto «Dirección general» ve todo y aprueba, pero **no** puede crear usuarios ni editar roles (eso es de superadmin y «Administración operativa»). La matriz es editable en Usuarios y permisos → Roles; decide si el VP debe poder dar de alta a su equipo. Ojo: solo el superadmin puede conceder permisos que el propio editor no tiene (D27).
-3. **Dónde corre la API** (NestJS): contenedor (Railway/Fly/VPS) o funciones de Vercel (D10). Mientras no exista, la web desplegada no puede iniciar sesión.
+3. ~~Dónde corre la API~~ → decidido (D31): como funciones de Vercel en el mismo proyecto, sin servidor aparte (ver sección 5). Falta que el usuario despliegue y decida el plan de Vercel (Hobby es solo uso no comercial).
 4. Proveedor de correo (recuperación de contraseña, invitaciones).
 5. Multi-organización: una sola (ELODIA) o varias.
 6. Logotipo vectorial y tipografías oficiales (hoy: texto "ELODIA" y serif provisional).
@@ -163,23 +163,31 @@ Usa `--org ELODIA-TEST` para pruebas. Los usuarios reales se dan de alta desde l
 
 ---
 
-## 5. Desplegar la web en Vercel (para revisar lo hecho)
+## 5. Desplegar en Vercel (web y API en un solo proyecto, sin servidor aparte)
 
-El despliegue lo hace el usuario (D10). **Sin API pública, la web desplegada solo muestra el login; no se puede entrar.** Dos caminos:
+El despliegue lo hace el usuario (D10, D31). **No se ha desplegado nada ni se ha probado esta configuración en Vercel**: `vercel.json` es una propuesta basada en la documentación de Vercel Services (beta). Si algo falla en el primer build, el log de Vercel dice qué ajustar.
 
-**A. Solo ver el diseño (login, 404).** Despliega la web y listo.
-**B. Probar todo.** Además hay que exponer la API: un túnel temporal desde tu equipo (`cloudflared tunnel --url http://localhost:4000` o ngrok) y poner esa URL en `API_URL` de Vercel; o desplegar la API en un host (decisión pendiente, D10).
+**Cómo queda:** un único proyecto de Vercel con dos _services_ (`vercel.json` en la raíz). `frontend` = `apps/web` (Next.js) y `backend` = `apps/api` (NestJS, que Vercel ejecuta como funciones). Las rutas `/api/v1/*` van a la API y todo lo demás a la web, en el **mismo dominio**, así la cookie de sesión es de primera parte. La web llama a la API en el servidor mediante un _binding_ que Vercel inyecta como `API_URL`. La API habla con Supabase por el pooler.
 
-**Al importar el repo, Vercel lo detecta como "multi-service" (api NestJS + web Next.js) y pide un `vercel.json`. No lo uses:** pulsa **"Import single project"** en la fila `web` (carpeta `apps/web`). `api` se podría importar igual como segundo proyecto, pero eso no está preparado ni probado (ver decisión D10).
+**Pasos (en vercel.com):**
 
-Configuración del proyecto en Vercel (**propuesta; no la he probado, no he desplegado nada**):
+1. _Add New → Project_ → importa `sdiaz-a11y/Tequila-Elodia`. Vercel lee `vercel.json` y muestra los dos services. **No** elijas "Import single project".
+2. _Environment Variables_ (Production, y Preview si quieres probar ramas). Todos son secretos: nunca en git.
+   - `DATABASE_URL` → la cadena del **Transaction pooler** (puerto 6543, con `?pgbouncer=true`) de Supabase → Connect.
+   - `APP_ENCRYPTION_KEY` → la de tu `.env` (obligatoria en producción aunque no se use 2FA).
+   - `TRUST_PROXY` → `1`.
+   - `WEB_ORIGIN` → solo si usas un dominio propio (p. ej. `https://os.elodia.mx`). Los dominios `*.vercel.app` del despliegue se aceptan solos.
+   - No pongas `API_URL` (lo inyecta el binding) ni `DIRECT_URL`/claves `SUPABASE_*` (la API no las usa).
+3. _Deploy_. Abre la URL y entra con `sdiaz@zigma3.com`.
 
-- **Root Directory:** `apps/web` y activar _Include source files outside of the Root Directory_ (la web usa `packages/shared`).
-- **Install Command:** `pnpm install --frozen-lockfile` (en la raíz del repo).
-- **Build Command:** `cd ../.. && pnpm turbo run build --filter=@elodia/web...`
-- **Env vars (Production y Preview):** `API_URL=<URL pública de la API>`. No se necesita ningún secreto en la web.
-- En la **API**: `WEB_ORIGIN=https://<tu-dominio>.vercel.app`, `TRUST_PROXY=1`, `NODE_ENV=production`, `DATABASE_URL`, `APP_ENCRYPTION_KEY`.
-- Riesgo: el repo fija `pnpm@12.15.0`; si Vercel no soporta esa versión, habrá que ajustar el `packageManager` o el Install Command.
+**Riesgos conocidos (sin probar):**
+
+- El repo fija `pnpm@12.15.0`; si Vercel no lo soporta, hay que ajustar `packageManager` o el comando de instalación.
+- La API se ejecuta desde `dist/main.js` (compilado con `tsc`, necesario por los decoradores de NestJS); si Vercel no acepta ese `entrypoint`, probar `src/main.ts` y revisar que la inyección de dependencias siga funcionando.
+- **Limitación de tasa del login en memoria:** en funciones serverless cada instancia cuenta por separado, así que el límite por IP es más débil; el bloqueo progresivo de cuenta (en base de datos) sigue protegiendo.
+- **Plan de Vercel:** el plan Hobby es solo para uso no comercial. Para ELODIA como negocio corresponde el plan Pro (de pago). Verifica precios y términos vigentes antes de decidir.
+- Las _preview deployments_ tienen "Deployment Protection" (inicio de sesión de Vercel) por defecto.
+- La migración de base de datos **no** corre en el despliegue: se aplica a mano (`pnpm --filter @elodia/database migrate:deploy`) con autorización.
 
 ---
 

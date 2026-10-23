@@ -45,6 +45,17 @@ const envSchema = z
 export type AppEnv = z.infer<typeof envSchema>;
 export const APP_ENV = Symbol('APP_ENV');
 
+/**
+ * Hosts Vercel itself assigns to this deployment (platform-controlled, not user input). Trusting them
+ * lets the first deploy log in without hand-copying the generated domain into WEB_ORIGIN; a custom
+ * domain still has to be listed in WEB_ORIGIN.
+ */
+function vercelOrigins(source: NodeJS.ProcessEnv): string[] {
+  return [source.VERCEL_PROJECT_PRODUCTION_URL, source.VERCEL_URL]
+    .filter((host): host is string => Boolean(host))
+    .map((host) => `https://${host}`);
+}
+
 /** Validates the environment once, at startup. Never logs values (they may contain secrets). */
 export function parseEnv(source: NodeJS.ProcessEnv = process.env): AppEnv {
   const result = envSchema.safeParse(source);
@@ -52,5 +63,6 @@ export function parseEnv(source: NodeJS.ProcessEnv = process.env): AppEnv {
     const issues = result.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ');
     throw new Error(`Invalid environment configuration — ${issues}`);
   }
-  return result.data;
+  const env = result.data;
+  return { ...env, WEB_ORIGIN: [...new Set([...env.WEB_ORIGIN, ...vercelOrigins(source)])] };
 }

@@ -3,7 +3,8 @@ import { cookies } from 'next/headers';
 import type { SessionUser } from '@elodia/shared';
 
 /** Server-side API origin (the browser never sees it: it talks to /api/v1 on the web origin). */
-export const API_URL = process.env.API_URL ?? 'http://localhost:4000';
+// Trailing slashes are dropped: on Vercel the value comes from a service binding.
+export const API_URL = (process.env.API_URL ?? 'http://localhost:4000').replace(/\/+$/, '');
 
 /**
  * Resolves the signed-in user on the server by forwarding the session cookie to the API.
