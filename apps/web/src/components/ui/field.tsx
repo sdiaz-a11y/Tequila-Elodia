@@ -57,3 +57,25 @@ export function Field({ id, label, hint, error, children, className }: FieldProp
     </div>
   );
 }
+
+/** Native select styled like Input: keyboard and screen-reader behaviour for free. */
+export function Select({
+  className,
+  invalid,
+  ...props
+}: React.ComponentProps<'select'> & { invalid?: boolean }) {
+  return (
+    <select
+      aria-invalid={invalid || undefined}
+      className={cn(
+        'h-11 w-full appearance-none rounded-control border border-line bg-surface-2 bg-[length:1rem] bg-[right_0.75rem_center] bg-no-repeat px-3.5 pr-9 text-sm text-fg',
+        "bg-[url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239d968a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")]",
+        'transition-[border-color,box-shadow] duration-150 hover:border-line-strong',
+        'focus-visible:border-gold-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/30',
+        'disabled:cursor-not-allowed disabled:opacity-50 aria-[invalid=true]:border-danger/70',
+        className,
+      )}
+      {...props}
+    />
+  );
+}

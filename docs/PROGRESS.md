@@ -1,7 +1,7 @@
 # PROGRESS — ELODIA OS
 
-**Fase actual:** Fase 1 — Sprints 1.1 a 1.5 completados; siguiente: 1.6 (administración: usuarios, roles, matriz de permisos, bitácora)
-**Última actualización:** 2026-10-22
+**Fase actual:** Fase 1 — Sprint 1.6 (administración) completado; siguiente: 1.7 (CRM)
+**Última actualización:** 2026-10-23
 
 ## Módulos completados
 
@@ -107,3 +107,15 @@ N/A (fase solo documental). Verificado: versiones de herramientas del entorno.
 - Se añadieron `docs/HANDOFF.md` (estado, plan, requisitos, puesta en marcha en otro equipo, despliegue en Vercel, checklist por push) y `docs/MASTER_PROMPT.md`. Migración `must_change_password` aplicada en Supabase (primer paso del Sprint 1.6, aún sin uso en código).
 - 2026-10-23: creado el superadmin técnico real `sdiaz@zigma3.com` (CLI `create-user`, org ELODIA, rol `tech_superadmin`); login verificado contra la API real. Pendiente: cambio de contraseña (Sprint 1.6) y usuario del VP.
 - 2026-10-23: CLI `reset-password` (política 12+, cierra sesiones, audita). Contraseña del superadmin fijada por el propietario; login verificado en local (API + web con proxy same-origin).
+
+## Sprint 1.6 (2026-10-23) — Administración de usuarios, roles y auditoría
+
+- **Shared**: esquemas Zod de administración (`admin.ts`), `changePasswordSchema`, `SessionUser.mustChangePassword`, `grantsWithin` (regla anti-escalada) y `ELEVATED_ROLE_KEYS`.
+- **API** (`apps/api/src/admin`): `/users` (listar con filtros y paginación, crear con contraseña temporal, editar nombre/rol/estado, restablecer contraseña, desbloquear), `/roles` (listar, detalle, reemplazar matriz, restablecer por defecto) y `/audit-logs` (listar con filtros + `export.csv`). `POST /auth/change-password`. Guard: con contraseña temporal pendiente solo se permite `/auth/me`, `/auth/logout` y el cambio (`403 password_change_required`).
+- **Seed**: ya no pisa los permisos de roles existentes (`--reset-role-grants` para forzarlo) — D28.
+- **Web**: `/usuarios` (tabla, búsqueda, filtros, alta, edición, acciones con confirmación, diálogo de contraseña temporal de un solo uso), `/usuarios/roles` (matriz editable con cambios sin guardar, descartar, restablecer), `/auditoria` (filtros por texto/acción/módulo/fechas, detalle antes/después, exportar CSV), `/cuenta/contrasena` y `/cambiar-contrasena` (forzado, fuera del shell). El menú ya no sugiere activar 2FA (D19).
+- **Decisiones**: D26–D30 en `DECISIONS.md`.
+- **Pruebas**: +43 (shared 7, api 31 de los cuales 23 de integración contra Supabase, web 5). Total 108. Cubren: permisos por endpoint, aislamiento entre organizaciones (404), escalada de privilegios, rol superadmin inmutable, flujo de contraseña temporal, revocación de sesiones al deshabilitar/restablecer, efecto inmediato de cambios de matriz, auditoría sin secretos, CSV.
+- **Verificación en navegador** (Chrome, build de producción, organización `ELODIA-TEST`): 25 comprobaciones del flujo completo OK.
+- **Hallazgo corregido durante el sprint**: la primera regla anti-escalada (exigir todos los permisos del rol) impedía que «Administración operativa» diera de alta a un vendedor; se cambió a la regla de D27.
+- **Pendiente / no cubierto**: la protección «siempre queda un superadmin activo» está implementada pero sin prueba automatizada (la organización de pruebas ya tiene varios superadmins); no hay recuperación de acceso por correo (sin proveedor); el «alcance Equipo» aún no se aplica en ningún módulo; Playwright dentro del repo llega en el Sprint 1.12.

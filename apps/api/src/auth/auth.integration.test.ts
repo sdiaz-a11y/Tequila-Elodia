@@ -5,7 +5,7 @@ import { Controller, Get, INestApplication, Module } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { config as loadEnv } from 'dotenv';
 import request from 'supertest';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createPrismaClient } from '@elodia/database';
 import { seed } from '@elodia/database/dist/seed';
 import { AppModule } from '../app.module';
@@ -14,6 +14,9 @@ import { parseEnv } from '../core/config/env';
 import { Authenticated, Requires } from './auth.types';
 import { PasswordService } from './password.service';
 import { totpCode } from './totp';
+
+// Each test chains remote round-trips and argon2 verifications; 5 s is too tight under load.
+vi.setConfig({ testTimeout: 60_000 });
 
 loadEnv({ path: path.resolve(__dirname, '../../../../.env'), quiet: true });
 
@@ -273,7 +276,7 @@ describe.skipIf(!hasDb)('authentication & authorization (Supabase)', () => {
     try {
       await http().get('/api/v1/probe/allowed').set('Cookie', cookie).expect(403);
     } finally {
-      await seed(prisma, TEST_ORG);
+      await seed(prisma, TEST_ORG, { resetRoleGrants: true });
     }
     await http().get('/api/v1/probe/allowed').set('Cookie', cookie).expect(200);
   });

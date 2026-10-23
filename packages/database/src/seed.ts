@@ -7,10 +7,20 @@ loadEnv({ path: path.resolve(__dirname, '../../../.env'), quiet: true });
 
 export const DEFAULT_ORG_NAME = 'ELODIA';
 
-/** Idempotent: seeds the organization, the permission catalog, system roles and their grants. No users and no business data. */
+export interface SeedOptions {
+  /** Overwrite the grants of existing system roles with the defaults. Off by default: administrators edit them (Sprint 1.6). */
+  resetRoleGrants?: boolean;
+}
+
+/**
+ * Idempotent: seeds the organization, the permission catalog and the system roles. Default grants are
+ * applied only to roles that do not have any yet, so edits made in the admin screen survive a re-seed.
+ * No users and no business data.
+ */
 export async function seed(
   prisma = createPrismaClient(),
   orgName = DEFAULT_ORG_NAME,
+  options: SeedOptions = {},
 ): Promise<void> {
   await prisma.$transaction(
     async (tx) => {
@@ -31,7 +41,8 @@ export async function seed(
           update: { name: ROLE_LABELS[key] },
           create: { organizationId: org.id, key, name: ROLE_LABELS[key], isSystem: true },
         });
-        // The default matrix is the source of truth for system roles: re-seeding resets it.
+        const hasGrants = (await tx.rolePermission.count({ where: { roleId: role.id } })) > 0;
+        if (hasGrants && !options.resetRoleGrants) continue;
         await tx.rolePermission.deleteMany({ where: { roleId: role.id } });
         await tx.rolePermission.createMany({
           data: grantsForRole(key).map((g) => ({
@@ -48,7 +59,7 @@ export async function seed(
 
 if (require.main === module) {
   const prisma = createPrismaClient();
-  seed(prisma)
+  seed(prisma, DEFAULT_ORG_NAME, { resetRoleGrants: process.argv.includes('--reset-role-grants') })
     .then(() => console.log('Seed completed'))
     .catch((e) => {
       console.error(e);

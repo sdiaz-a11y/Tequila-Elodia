@@ -95,6 +95,7 @@ export class SessionsService {
       name: user.name,
       roles: user.roles.map((r) => r.role.key),
       totpEnabled: user.totpEnabledAt !== null,
+      mustChangePassword: user.mustChangePassword,
       permissions,
     };
   }

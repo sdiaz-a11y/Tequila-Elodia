@@ -129,7 +129,7 @@ function TwoFactorCard() {
         {user.totpEnabled ? (
           <Badge tone="success">Activa</Badge>
         ) : (
-          <Badge tone="warning">No activada</Badge>
+          <Badge tone="neutral">No activada</Badge>
         )}
       </CardHeader>
       <CardContent className="grid gap-5">
@@ -145,8 +145,7 @@ function TwoFactorCard() {
         {!user.totpEnabled && !setup ? (
           <div className="flex flex-wrap items-center justify-between gap-4">
             <p className="max-w-md text-sm text-muted">
-              Recomendado para todas las cuentas y, en especial, para dirección y administración
-              técnica.
+              Opcional: añade una capa extra a tu cuenta. ELODIA OS no la exige a ninguna cuenta.
             </p>
             <Button variant="primary" loading={busy} onClick={start}>
               <ShieldCheck aria-hidden /> Activar verificación

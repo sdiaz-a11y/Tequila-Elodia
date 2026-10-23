@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { LogOut, ShieldCheck } from 'lucide-react';
+import { KeyRound, LogOut, ShieldCheck } from 'lucide-react';
 import { ROLE_LABELS, type RoleKey, type SessionUser } from '@elodia/shared';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -40,11 +40,12 @@ export function UserMenu({ user, onSignOut }: { user: SessionUser; onSignOut: ()
           <Link href="/cuenta/seguridad">
             <ShieldCheck aria-hidden />
             Seguridad de la cuenta
-            {user.totpEnabled ? null : (
-              <Badge tone="warning" className="ml-auto">
-                Recomendado
-              </Badge>
-            )}
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/cuenta/contrasena">
+            <KeyRound aria-hidden />
+            Cambiar contraseña
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem danger onSelect={onSignOut}>

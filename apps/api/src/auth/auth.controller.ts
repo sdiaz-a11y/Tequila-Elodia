@@ -1,11 +1,23 @@
 import { Body, Controller, Get, HttpCode, Inject, Post, Req, Res } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
-import { loginSchema, totpDisableSchema, totpEnableSchema, type SessionUser } from '@elodia/shared';
+import {
+  changePasswordSchema,
+  loginSchema,
+  totpDisableSchema,
+  totpEnableSchema,
+  type SessionUser,
+} from '@elodia/shared';
 import { APP_ENV, type AppEnv } from '../core/config/env';
 import { ZodValidationPipe } from '../core/validation/zod-validation.pipe';
 import { AuthService } from './auth.service';
-import { Authenticated, Public, type AuthedRequest, type RequestContext } from './auth.types';
+import {
+  AllowPendingPasswordChange,
+  Authenticated,
+  Public,
+  type AuthedRequest,
+  type RequestContext,
+} from './auth.types';
 import { clearSessionCookie, readCookie, sessionCookieName, setSessionCookie } from './cookies';
 
 const contextOf = (req: AuthedRequest): RequestContext => ({
@@ -36,6 +48,7 @@ export class AuthController {
   }
 
   @Authenticated()
+  @AllowPendingPasswordChange()
   @Post('logout')
   @HttpCode(204)
   async logout(
@@ -47,6 +60,7 @@ export class AuthController {
   }
 
   @Authenticated()
+  @AllowPendingPasswordChange()
   @Post('logout-all')
   @HttpCode(200)
   async logoutAll(
@@ -59,9 +73,23 @@ export class AuthController {
   }
 
   @Authenticated()
+  @AllowPendingPasswordChange()
   @Get('me')
   me(@Req() req: AuthedRequest): { user: SessionUser } {
     return { user: req.user! };
+  }
+
+  /** Replaces the password (also the way out of a temporary one). Other sessions are revoked. */
+  @Authenticated()
+  @AllowPendingPasswordChange()
+  @Post('change-password')
+  @HttpCode(204)
+  async changePassword(
+    @Body(new ZodValidationPipe(changePasswordSchema))
+    body: ReturnType<typeof changePasswordSchema.parse>,
+    @Req() req: AuthedRequest,
+  ): Promise<void> {
+    await this.auth.changePassword(req.user!, body, contextOf(req), this.token(req));
   }
 
   @Authenticated()

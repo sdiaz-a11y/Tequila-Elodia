@@ -1,6 +1,7 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { AdminModule } from './admin/admin.module';
 import { AuthController } from './auth/auth.controller';
 import { AuthModule } from './auth/auth.module';
 import { AuthGuard, CsrfGuard, PermissionsGuard } from './auth/guards';
@@ -34,6 +35,7 @@ import { HealthModule } from './health/health.module';
       ],
     }),
     AuthModule,
+    AdminModule,
     HealthModule,
   ],
   providers: [

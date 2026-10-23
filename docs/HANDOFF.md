@@ -2,7 +2,7 @@
 
 > **Regla del proyecto:** este archivo se actualiza **en cada commit que se sube al repositorio** (al terminar cada sprint y antes de cada `git push`). Es lo primero que se lee al cambiar de equipo o de sesión. Si el repo avanzó y este archivo no, el repo está mal entregado.
 >
-> **Última actualización:** 2026-10-23 · **Último commit incluido:** ver `git log -1` · **Fase actual:** Fase 1, Sprints 1.1–1.5 terminados.
+> **Última actualización:** 2026-10-23 · **Último commit incluido:** ver `git log -1` · **Fase actual:** Fase 1, Sprints 1.1–1.6 terminados.
 
 ---
 
@@ -31,26 +31,26 @@ Fase 0 (documentación) aprobada. Fase 1 en curso. Todo está en `main` de `gith
 | 1.3        | API base (NestJS 12): config validada con Zod, errores RFC 7807, request-id, logging estructurado, `AuditService`, `/health` y `/health/ready`, paginación común                                                                                                                                                         | ✅     |
 | 1.4        | Autenticación: login argon2id, sesiones server-side en cookie, CSRF, bloqueo progresivo, rate limit, 2FA TOTP opcional, guards deny-by-default (`@Public`, `@Authenticated`, `@Requires`), CLI `create-user`                                                                                                             | ✅     |
 | 1.5        | Web (Next.js 16): sistema de diseño "vidrio negro + dorado", login con la botella oficial, shell (sidebar colapsable, paleta Ctrl K, selector de periodo, notificaciones, menú de usuario), dashboard con estados vacíos honestos, página de seguridad con 2FA + QR, páginas de módulo pendiente                         | ✅     |
+| 1.6        | Administración: **usuarios** (alta con contraseña temporal de un solo uso + cambio obligatorio al entrar, editar nombre/rol, deshabilitar/habilitar, restablecer contraseña, desbloquear), **roles y matriz de permisos editable** (con restablecer valores por defecto), **bitácora de auditoría** con filtros, detalle antes/después y exportación CSV, **cambiar contraseña** (voluntario y forzado). Sin 2FA (D19). Reglas anti-escalada de privilegios (D27) | ✅     |
 
-**Migraciones aplicadas en Supabase** (en `packages/database/prisma/migrations/`): `init_identity_crm`, `auth_columns`, `audit_user_restrict`, `must_change_password` (esta última añade `users.must_change_password` y `users.password_changed_at`; **aún no las usa ningún código**, es el primer paso del Sprint 1.6).
+**Migraciones aplicadas en Supabase** (en `packages/database/prisma/migrations/`): `init_identity_crm`, `auth_columns`, `audit_user_restrict`, `must_change_password` (añade `users.must_change_password` y `users.password_changed_at`; las usa el Sprint 1.6). El Sprint 1.6 **no añadió migraciones**.
 
-**Verificación al cierre:** `pnpm lint`, `pnpm typecheck`, `pnpm build` y `pnpm test` pasan (65 tests: 13 shared, 3 database, 34 api, 15 web). Los tests de integración usan la base real de Supabase y la organización aparte `ELODIA-TEST`.
+**Verificación al cierre del 1.6:** `pnpm lint`, `pnpm typecheck`, `pnpm build` y `pnpm test` pasan (108 tests: 20 shared, 3 database, 65 api, 20 web). Los tests de integración usan la base real de Supabase y la organización aparte `ELODIA-TEST`. Además se recorrió la interfaz real en Chrome (alta de usuario, contraseña temporal, cambio forzado, matriz de roles, bitácora, CSV, vista de vendedor sin acceso): 25 comprobaciones OK, sin errores inesperados en consola. Pendiente: el flujo no está en Playwright dentro del repo (llega en el Sprint 1.12).
 
 ### Datos que existen hoy en Supabase
 
-- Organización **ELODIA** con 10 roles de sistema y sus permisos. **Un usuario real: `sdiaz@zigma3.com`, rol `tech_superadmin` (superadmin técnico), creado el 2026-10-23** su contraseña fue fijada por el propietario el 2026-10-23 con `reset-password` (no está en el repo). Falta el usuario del VP.
-- Organización **ELODIA-TEST**: usuarios de prueba creados por los tests y por mí (un usuario `demo@elodia-test.invalid`). Es basura inerte; sus filas de auditoría no se pueden borrar por diseño.
+- Organización **ELODIA** con 10 roles de sistema y sus permisos. **Un usuario real: `sdiaz@zigma3.com`, rol `tech_superadmin` (superadmin técnico), creado el 2026-10-23** su contraseña fue fijada por el propietario el 2026-10-23 con `reset-password` (no está en el repo). **Falta crear el usuario del VP** (`rcastro@zigma3.com`, rol «Dirección general»): hazlo desde la interfaz con tu superadmin (Usuarios y permisos → Nuevo usuario) y entrégale la contraseña temporal por un canal seguro.
+- Organización **ELODIA-TEST**: usuarios de prueba creados por los tests, por mí (`demo@elodia-test.invalid`) y por la verificación del 1.6 (`smokeroot-*`, `smokenew-*`). Es basura inerte; sus filas de auditoría no se pueden borrar por diseño.
 
 ---
 
 ## 3. Qué sigue (plan)
 
-Fase 1 tiene 12 sprints; faltan 7. Detalle y criterios en [ROADMAP.md](ROADMAP.md).
+Fase 1 tiene 12 sprints; faltan 6. Detalle y criterios en [ROADMAP.md](ROADMAP.md).
 
 | Sprint              | Entregable                                                                                                                                                                                                          | Lo que necesita                                                                                                                                                               |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **1.6** (siguiente) | Administración: usuarios (alta con contraseña temporal que se muestra una vez + cambio forzado), roles y **matriz de permisos editable**, bitácora de auditoría con filtros y exportación CSV, cambio de contraseña | Decidir correo de superadmin/VP (decisión 7) y si el 2FA será obligatorio para ellos (D19). Sin proveedor de correo: la recuperación de acceso queda para cuando se elija uno |
-| 1.7                 | CRM completo: cuentas, contactos (copiar teléfono, abrir WhatsApp), leads, pipeline Kanban configurable, oportunidades, actividades, importar/exportar CSV                                                          | Que el negocio defina las etapas del pipeline (no se inventan). Convendría una librería de drag-and-drop para el Kanban                                                       |
+| **1.7** (siguiente) | CRM completo: cuentas, contactos (copiar teléfono, abrir WhatsApp), leads, pipeline Kanban configurable, oportunidades, actividades, importar/exportar CSV                                                          | Que el negocio defina las etapas del pipeline (no se inventan). Convendría una librería de drag-and-drop para el Kanban                                                       |
 | 1.8                 | Territorios + expansión + distribuidores (sin duplicar cuentas)                                                                                                                                                     | Datos reales de mercados; mapa solo con ubicaciones válidas                                                                                                                   |
 | 1.9                 | Proyectos y tareas (Kanban, calendario, lista)                                                                                                                                                                      | —                                                                                                                                                                             |
 | 1.10                | Catálogo (productos/variantes), Brand Kit y archivos                                                                                                                                                                | **Bucket S3/Cloudflare R2** (credenciales) para archivos; datos reales de productos del equipo                                                                                |
@@ -61,8 +61,9 @@ Fase 1 tiene 12 sprints; faltan 7. Detalle y criterios en [ROADMAP.md](ROADMAP.m
 
 ### Decisiones pendientes del usuario
 
-1. Correo del **VP** (decisión 7 del ROADMAP). El superadmin técnico ya existe (ver sección 2). Aún no hay pantalla de cambio de contraseña (llega en el Sprint 1.6); mientras tanto se cambia con el CLI `reset-password`. Política: mínimo 12 caracteres (la contraseña corta que se propuso, de 9, se rechazó a propósito).
-2. ¿2FA obligatorio para superadmin/VP? (D19).
+1. ~~Correo del VP~~ → `rcastro@zigma3.com` (rol `director_vp`). Falta **crearlo** desde la interfaz (ver sección 2). Política de contraseñas: mínimo 12 caracteres (la contraseña corta de 9 que se propuso se rechazó a propósito).
+2. ~~2FA obligatorio~~ → decidido: **no se usa 2FA** (D19).
+   2b. **¿Qué puede administrar el VP?** Por defecto «Dirección general» ve todo y aprueba, pero **no** puede crear usuarios ni editar roles (eso es de superadmin y «Administración operativa»). La matriz es editable en Usuarios y permisos → Roles; decide si el VP debe poder dar de alta a su equipo. Ojo: solo el superadmin puede conceder permisos que el propio editor no tiene (D27).
 3. **Dónde corre la API** (NestJS): contenedor (Railway/Fly/VPS) o funciones de Vercel (D10). Mientras no exista, la web desplegada no puede iniciar sesión.
 4. Proveedor de correo (recuperación de contraseña, invitaciones).
 5. Multi-organización: una sola (ELODIA) o varias.
@@ -73,6 +74,7 @@ Fase 1 tiene 12 sprints; faltan 7. Detalle y criterios en [ROADMAP.md](ROADMAP.m
 
 - **Rotar `SUPABASE_SECRET_KEY`** (se pegó en un chat) y actualizar `.env`.
 - **Revocar el token personal de GitHub** que se pegó en un chat (GitHub → Settings → Developer settings → Personal access tokens).
+- `APP_ENCRYPTION_KEY`: el equipo de la sesión del 2026-10-23 generó una **nueva** porque la original solo estaba en otra máquina. Solo cifra secretos 2FA, que no se usan (D19); si algún 2FA existente se activó con la clave anterior, deja de funcionar (se desactiva desde la base). Guarda la clave vigente en un gestor de contraseñas.
 
 ---
 
@@ -141,10 +143,12 @@ Existe el superadmin real `sdiaz@zigma3.com` en ELODIA (su contraseña temporal 
 
 ```powershell
 $env:NEW_USER_PASSWORD='una-contraseña-larga-de-12+'
-pnpm --filter @elodia/api create-user -- --email tu@correo.mx --name "Tu Nombre" --role tech_superadmin --org ELODIA-TEST
+pnpm --filter @elodia/api create-user --email tu@correo.mx --name "Tu Nombre" --role tech_superadmin --org ELODIA-TEST
 ```
 
-Usa `--org ELODIA-TEST` para pruebas; el usuario real del superadmin se crea con `--org ELODIA` cuando el usuario decida el correo. Restablecer la contraseña de un usuario (12+ caracteres; cierra sus sesiones y queda en auditoría): `$env:NEW_USER_PASSWORD='…'; pnpm --filter @elodia/api reset-password -- --email x@y.mx --org ELODIA`. Seed (idempotente): `pnpm --filter @elodia/database seed`. **Ojo:** el seed reaplica la matriz de permisos por defecto a los roles de sistema; cuando exista la edición de permisos (Sprint 1.6) hay que cambiarlo para que no pise cambios.
+**Sin `--` entre el nombre del script y las opciones:** con pnpm 12 el `--` llega al script y rompe los argumentos.
+
+Usa `--org ELODIA-TEST` para pruebas. Los usuarios reales se dan de alta desde la interfaz (Usuarios y permisos → Nuevo usuario: genera una contraseña temporal que se muestra una sola vez). El CLI queda para el primer superadmin o emergencias. Restablecer la contraseña desde el CLI (12+ caracteres; cierra sus sesiones y queda en auditoría): `$env:NEW_USER_PASSWORD='…'; pnpm --filter @elodia/api reset-password --email x@y.mx --org ELODIA`; desde la interfaz: menú de acciones del usuario → Restablecer contraseña. Seed (idempotente): `pnpm --filter @elodia/database seed`; **desde el Sprint 1.6 ya no pisa los permisos editados** de roles existentes. Para volver a los valores por defecto: `pnpm --filter @elodia/database seed --reset-role-grants` o, por rol, el botón «Restablecer valores por defecto» en la matriz (D28).
 
 ### 4.6 Convenciones y trampas conocidas
 

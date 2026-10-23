@@ -245,8 +245,7 @@ export const NAV: NavGroup[] = [
         label: 'Usuarios y permisos',
         href: '/usuarios',
         icon: KeyRound,
-        status: 'soon',
-        plan: 'Sprint 1.6',
+        status: 'live',
         resource: 'users',
       },
     ],
@@ -288,7 +287,7 @@ export const NAV: NavGroup[] = [
         href: '/configuracion',
         icon: Settings,
         status: 'soon',
-        plan: 'Sprint 1.6',
+        plan: 'Por definir',
         resource: 'settings',
       },
       {
@@ -303,8 +302,7 @@ export const NAV: NavGroup[] = [
         label: 'Auditoría',
         href: '/auditoria',
         icon: ScrollText,
-        status: 'soon',
-        plan: 'Sprint 1.6',
+        status: 'live',
         resource: 'audit',
       },
     ],
@@ -313,6 +311,7 @@ export const NAV: NavGroup[] = [
 
 export const ACCOUNT_PAGES = [
   { label: 'Seguridad de la cuenta', href: '/cuenta/seguridad' },
+  { label: 'Cambiar contraseña', href: '/cuenta/contrasena' },
 ] as const;
 
 const READ: Action = 'read';
@@ -350,6 +349,12 @@ export interface Crumb {
 export function breadcrumbsFor(pathname: string): Crumb[] {
   const account = ACCOUNT_PAGES.find((p) => p.href === pathname);
   if (account) return [{ label: 'Cuenta' }, { label: account.label }];
+  if (pathname === '/usuarios/roles')
+    return [
+      { label: 'Administración' },
+      { label: 'Usuarios y permisos', href: '/usuarios' },
+      { label: 'Roles y permisos' },
+    ];
   const hit = findNavItem(pathname);
   if (!hit) return [{ label: 'Inicio', href: '/' }];
   if (hit.item.href === '/') return [{ label: 'Dirección' }, { label: hit.item.label }];

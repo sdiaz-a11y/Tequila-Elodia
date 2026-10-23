@@ -27,6 +27,12 @@ export const totpDisableSchema = z.object({
   code: totpCodeSchema,
 });
 
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1).max(128),
+  newPassword: passwordSchema,
+});
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+
 export interface SessionUser {
   id: string;
   organizationId: string;
@@ -34,6 +40,8 @@ export interface SessionUser {
   name: string;
   roles: string[];
   totpEnabled: boolean;
+  /** Set by an administrator-issued temporary password: the user can only change it until done. */
+  mustChangePassword: boolean;
   /** `resource:action` → widest scope granted by any of the user's roles. */
   permissions: Record<string, Scope>;
 }
@@ -43,3 +51,23 @@ export const permissionKey = (resource: Resource, action: Action): string =>
 
 const SCOPE_RANK: Record<Scope, number> = { own: 0, team: 1, all: 2 };
 export const widerScope = (a: Scope, b: Scope): Scope => (SCOPE_RANK[a] >= SCOPE_RANK[b] ? a : b);
+
+export interface GrantLike {
+  resource: Resource;
+  action: Action;
+  scope: Scope;
+}
+
+/**
+ * Anti-escalation rule: a user may only hand out what they hold themselves. Each grant must be covered
+ * by the actor's own permission for the same resource and action, at the same or a wider scope.
+ */
+export function grantsWithin(
+  actorPermissions: Record<string, Scope>,
+  grants: readonly GrantLike[],
+): boolean {
+  return grants.every((g) => {
+    const held = actorPermissions[permissionKey(g.resource, g.action)];
+    return held !== undefined && SCOPE_RANK[held] >= SCOPE_RANK[g.scope];
+  });
+}

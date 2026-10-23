@@ -9,7 +9,13 @@ import {
 import { Reflector } from '@nestjs/core';
 import { permissionKey, type Action, type Resource } from '@elodia/shared';
 import { APP_ENV, type AppEnv } from '../core/config/env';
-import { IS_AUTHENTICATED, IS_PUBLIC, REQUIRES, type AuthedRequest } from './auth.types';
+import {
+  ALLOW_PASSWORD_CHANGE,
+  IS_AUTHENTICATED,
+  IS_PUBLIC,
+  REQUIRES,
+  type AuthedRequest,
+} from './auth.types';
 import { readCookie, sessionCookieName } from './cookies';
 import { SessionsService } from './sessions.service';
 
@@ -56,6 +62,12 @@ export class AuthGuard implements CanActivate {
     const token = readCookie(req, sessionCookieName(this.env));
     const authed = token ? await this.sessions.authenticate(token) : null;
     if (!authed) throw new UnauthorizedException('Inicia sesión para continuar');
+    // A temporary password only unlocks the way to replace it (decision D26).
+    if (authed.user.mustChangePassword && !flag(this.reflector, ALLOW_PASSWORD_CHANGE, context))
+      throw new ForbiddenException({
+        message: 'Debes cambiar tu contraseña temporal para continuar',
+        code: 'password_change_required',
+      });
     req.user = authed.user;
     req.sessionId = authed.sessionId;
     return true;

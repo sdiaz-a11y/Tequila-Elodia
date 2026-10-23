@@ -54,6 +54,12 @@ export const ROLE_KEYS = [
 ] as const;
 export type RoleKey = (typeof ROLE_KEYS)[number];
 
+/**
+ * Roles that only someone who already holds all of their permissions may assign or manage. Every other
+ * system role can be handed out by anyone allowed to create users; custom roles follow the strict rule too.
+ */
+export const ELEVATED_ROLE_KEYS: readonly RoleKey[] = ['tech_superadmin', 'director_vp'];
+
 /** Display names for the system roles (Spanish, Mexico). */
 export const ROLE_LABELS: Record<RoleKey, string> = {
   tech_superadmin: 'Superadministrador técnico',

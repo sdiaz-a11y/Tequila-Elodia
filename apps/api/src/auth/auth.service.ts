@@ -1,5 +1,5 @@
 import { BadRequestException, Inject, Injectable, UnauthorizedException } from '@nestjs/common';
-import type { LoginInput, SessionUser } from '@elodia/shared';
+import type { ChangePasswordInput, LoginInput, SessionUser } from '@elodia/shared';
 import { AuditService } from '../core/audit/audit.service';
 import { APP_ENV, type AppEnv } from '../core/config/env';
 import { PrismaService } from '../core/prisma/prisma.service';
@@ -135,6 +135,62 @@ export class AuthService {
       ip: ctx.ip,
     });
     return count;
+  }
+
+  /**
+   * The current password is re-checked (a stolen session alone cannot take over the account) and wrong
+   * attempts feed the same progressive lock as login. The new one must differ. Other sessions end.
+   */
+  async changePassword(
+    user: SessionUser,
+    input: ChangePasswordInput,
+    ctx: RequestContext,
+    currentSessionToken: string,
+  ): Promise<void> {
+    const row = await this.prisma.client.user.findUniqueOrThrow({ where: { id: user.id } });
+    const now = new Date();
+    if (row.lockedUntil && row.lockedUntil > now)
+      throw new BadRequestException('Demasiados intentos. Inténtalo más tarde.');
+    if (
+      !row.passwordHash ||
+      !(await this.passwords.verify(row.passwordHash, input.currentPassword))
+    ) {
+      await this.registerFailure(
+        row.id,
+        row.organizationId,
+        row.failedLoginCount + 1,
+        ctx,
+        'bad_current_password',
+      );
+      throw new BadRequestException('La contraseña actual no es correcta');
+    }
+    if (input.newPassword === input.currentPassword)
+      throw new BadRequestException('La nueva contraseña debe ser distinta de la actual');
+
+    await this.prisma.client.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: user.id },
+        data: {
+          passwordHash: await this.passwords.hash(input.newPassword),
+          mustChangePassword: false,
+          passwordChangedAt: now,
+          failedLoginCount: 0,
+          lockedUntil: null,
+        },
+      });
+      await this.audit.record(
+        {
+          organizationId: user.organizationId,
+          userId: user.id,
+          action: 'change_password',
+          resource: 'auth',
+          resourceId: user.id,
+          ip: ctx.ip,
+        },
+        tx,
+      );
+    });
+    await this.revokeOtherSessions(user.id, currentSessionToken);
   }
 
   /** Step 1 of 2FA: creates a pending secret (stored encrypted, not active until confirmed). */

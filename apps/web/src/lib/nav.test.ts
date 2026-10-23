@@ -23,7 +23,7 @@ describe('navigation', () => {
     ]);
   });
 
-  it('only marks the dashboard as live for now and gives every pending module an internal plan', () => {
+  it('only marks the built modules as live and gives every pending module an internal plan', () => {
     for (const item of flatNav()) {
       if (item.status === 'soon') expect(item.plan, item.label).toBeTruthy();
     }
@@ -31,7 +31,7 @@ describe('navigation', () => {
       flatNav()
         .filter((i) => i.status === 'live')
         .map((i) => i.href),
-    ).toEqual(['/']);
+    ).toEqual(['/', '/usuarios', '/auditoria']);
   });
 
   it('hides modules the role cannot read (UI hint only; the API enforces)', () => {
@@ -59,6 +59,11 @@ describe('navigation', () => {
     expect(findNavItem('/crm/cuentas/123')?.item.href).toBe('/crm');
     expect(findNavItem('/nada')).toBeNull();
     expect(breadcrumbsFor('/crm')).toEqual([{ label: 'Comercial' }, { label: 'CRM' }]);
+    expect(breadcrumbsFor('/usuarios/roles')).toEqual([
+      { label: 'Administración' },
+      { label: 'Usuarios y permisos', href: '/usuarios' },
+      { label: 'Roles y permisos' },
+    ]);
     expect(breadcrumbsFor('/cuenta/seguridad')).toEqual([
       { label: 'Cuenta' },
       { label: 'Seguridad de la cuenta' },
