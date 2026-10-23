@@ -40,6 +40,8 @@ const paths: Record<string, string[]> = {
   campaigns: ['/campanas', '/calendario'],
   compliance_documents: ['/cumplimiento', '/'],
   transactions: ['/finanzas'],
+  quotes: ['/cotizaciones'],
+  orders: ['/pedidos'],
 };
 
 export async function saveRow(key: string, id: string | null, input: unknown): Promise<SaveResult> {

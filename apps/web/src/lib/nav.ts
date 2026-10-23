@@ -118,16 +118,14 @@ export const NAV: NavGroup[] = [
         label: 'Cotizaciones',
         href: '/cotizaciones',
         icon: FileText,
-        status: 'soon',
-        plan: 'Fase 2',
+        status: 'live',
         resource: 'quotes',
       },
       {
         label: 'Pedidos',
         href: '/pedidos',
         icon: ShoppingCart,
-        status: 'soon',
-        plan: 'Fase 2',
+        status: 'live',
         resource: 'orders',
       },
       {

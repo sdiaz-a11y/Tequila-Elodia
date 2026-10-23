@@ -47,3 +47,11 @@ export function daysUntil(day: string): number {
 export function dayInDays(n: number): string {
   return new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
 }
+
+/** Money with cents, for documents (quotes, orders, payments) where every peso must be visible. */
+export function formatMoney2(value: number | string | null | undefined): string {
+  const n = Number(value ?? 0);
+  return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(
+    Number.isFinite(n) ? n : 0,
+  );
+}

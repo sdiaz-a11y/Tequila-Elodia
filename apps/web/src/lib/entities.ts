@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { CHANNELS, FORMATS } from '@/lib/content';
+import { ORDER_STATUS, QUOTE_STATUS } from '@/lib/sales';
 
 /**
  * Declarative description of every commercial entity. Plain data (no functions) so it can cross the
@@ -55,7 +56,7 @@ export interface Column {
   /** Dot path into the row, e.g. `owner.name`. */
   path: string;
   label: string;
-  as?: 'text' | 'badge' | 'money' | 'date' | 'datetime' | 'bool' | 'expiry';
+  as?: 'text' | 'badge' | 'money' | 'money2' | 'date' | 'datetime' | 'bool' | 'expiry';
   /** Maps a raw value to a label (and tone for badges). */
   options?: readonly Option[];
 }
@@ -75,6 +76,8 @@ export interface EntityDef {
   filters: readonly { name: string; label: string; options: readonly Option[] }[];
   order: { column: string; ascending: boolean };
   softDelete?: boolean;
+  /** Base path of a detail page; the first column then links to `${detail}/${id}`. */
+  detail?: string;
   empty: { title: string; description: string };
 }
 
@@ -92,7 +95,9 @@ export type EntityKey =
   | 'variants'
   | 'campaigns'
   | 'compliance_documents'
-  | 'transactions';
+  | 'transactions'
+  | 'quotes'
+  | 'orders';
 
 const opts = (...pairs: [string, string][]): Option[] =>
   pairs.map(([value, label]) => ({ value, label }));
@@ -168,6 +173,77 @@ export const DOC_STATUS = opts(
 const TX_KINDS = opts(['income', 'Ingreso'], ['expense', 'Egreso']);
 
 export const ENTITIES: Record<EntityKey, EntityDef> = {
+  quotes: {
+    key: 'quotes',
+    table: 'quotes',
+    singular: 'cotización',
+    plural: 'Cotizaciones',
+    isFeminine: true,
+    detail: '/cotizaciones',
+    select: '*, account:accounts!account_id(name)',
+    search: ['number'],
+    order: { column: 'created_at', ascending: false },
+    filters: [{ name: 'status', label: 'Todos los estados', options: QUOTE_STATUS }],
+    fields: [
+      {
+        name: 'account_id',
+        label: 'Empresa',
+        type: 'relation',
+        relation: 'accounts',
+        required: true,
+        lockOnEdit: true,
+      },
+      { name: 'valid_until', label: 'Válida hasta', type: 'date' },
+      { name: 'notes', label: 'Notas para el cliente', type: 'textarea' },
+    ],
+    columns: [
+      { path: 'number', label: 'Folio' },
+      { path: 'account.name', label: 'Empresa' },
+      { path: 'status', label: 'Estado', as: 'badge', options: QUOTE_STATUS },
+      { path: 'total', label: 'Total', as: 'money2' },
+      { path: 'valid_until', label: 'Válida hasta', as: 'date' },
+    ],
+    empty: {
+      title: 'Aún no hay cotizaciones',
+      description:
+        'Crea una cotización para una empresa y agrega las líneas con sus precios y descuentos.',
+    },
+  },
+  orders: {
+    key: 'orders',
+    table: 'orders',
+    singular: 'pedido',
+    plural: 'Pedidos',
+    isFeminine: false,
+    detail: '/pedidos',
+    select: '*, account:accounts!account_id(name)',
+    search: ['number'],
+    order: { column: 'created_at', ascending: false },
+    filters: [{ name: 'status', label: 'Todos los estados', options: ORDER_STATUS }],
+    fields: [
+      {
+        name: 'account_id',
+        label: 'Empresa',
+        type: 'relation',
+        relation: 'accounts',
+        required: true,
+        lockOnEdit: true,
+      },
+      { name: 'notes', label: 'Notas', type: 'textarea' },
+    ],
+    columns: [
+      { path: 'number', label: 'Folio' },
+      { path: 'account.name', label: 'Empresa' },
+      { path: 'status', label: 'Estado', as: 'badge', options: ORDER_STATUS },
+      { path: 'total', label: 'Total', as: 'money2' },
+      { path: 'paid_total', label: 'Pagado', as: 'money2' },
+    ],
+    empty: {
+      title: 'Aún no hay pedidos',
+      description:
+        'Los pedidos nacen al convertir una cotización aceptada, o los creas directamente.',
+    },
+  },
   compliance_documents: {
     key: 'compliance_documents',
     table: 'compliance_documents',

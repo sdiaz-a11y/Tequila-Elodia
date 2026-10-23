@@ -8,6 +8,7 @@ Una sola aplicación Next.js (`apps/web`) con **Supabase** (inicio de sesión + 
 - **Comercial**: empresas y prospectos, contactos, pipeline por etapas, actividades, territorios, distribuidores.
 - **Dashboard** con cifras reales (vacío mientras no haya datos).
 - **Contenido (sin IA)**: Brand Kit (paleta, tipografías, tono, mensajes y restricciones), biblioteca multimedia con archivos privados, calendario editorial y aprobaciones. Nada se publica sin revisión humana y, para aprobar, quien aprueba confirma la revisión de la normativa de publicidad de bebidas alcohólicas (la plataforma no valida ese cumplimiento).
+- **Ventas**: cotizaciones y pedidos con líneas que guardan el precio, descuento e IVA del momento (cambiar la lista de precios después no los altera), descuentos mayores a 10 % solo con gerencia, conversión de cotización aceptada a pedido en una sola transacción, pagos con saldo controlado e impresión / PDF.
 - **Operación**: proyectos, tablero de tareas, productos, presentaciones (SKU) con precio y costo, campañas con presupuesto y resultados.
 - **Cumplimiento**: documentos (permisos, certificados, contratos) con vencimiento y aprobación humana; el panel avisa de los que vencen en 30 días.
 - **Finanzas**: ingresos y egresos con balance del mes (solo lo ve quien administra el dinero).
@@ -15,7 +16,7 @@ Una sola aplicación Next.js (`apps/web`) con **Supabase** (inicio de sesión + 
 - **Auditoría**: cada alta, cambio y borrado queda registrado por la base de datos y no se puede editar.
 - Marca y diseño: `docs/brand-reference.json`, `assets/brand/official/`.
 
-Pendiente (aparece en el menú como "Próximamente"): Content Studio con IA, redes sociales, cotizaciones y pedidos, inventario y logística, planeación estratégica, BI, asistente IA, automatizaciones e integraciones.
+Pendiente (aparece en el menú como "Próximamente"): Content Studio con IA, redes sociales, inventario y logística, planeación estratégica, BI, asistente IA, automatizaciones e integraciones.
 
 ## Cómo funciona la seguridad
 

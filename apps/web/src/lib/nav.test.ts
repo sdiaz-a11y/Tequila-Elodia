@@ -37,6 +37,8 @@ describe('navigation', () => {
       '/contactos',
       '/pipeline',
       '/actividades',
+      '/cotizaciones',
+      '/pedidos',
       '/distribuidores',
       '/territorios',
       '/brand-kit',

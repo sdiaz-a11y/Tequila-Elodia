@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useTransition } from 'react';
+import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   Check,
@@ -37,7 +38,14 @@ import {
   type Option,
   type RelationKey,
 } from '@/lib/entities';
-import { daysUntil, formatDateTime, formatDay, formatMoney, isOverdue } from '@/lib/format';
+import {
+  daysUntil,
+  formatDateTime,
+  formatDay,
+  formatMoney,
+  formatMoney2,
+  isOverdue,
+} from '@/lib/format';
 import { EntityFormDialog } from './entity-form-dialog';
 
 const PAGE_SIZE = 20;
@@ -52,6 +60,8 @@ function Cell({ col, row }: { col: Column; row: Row }) {
       const label = col.options?.find((o) => o.value === value)?.label ?? String(value);
       return <Badge tone={value === 'active' ? 'success' : 'gold'}>{label}</Badge>;
     }
+    case 'money2':
+      return <span className="tabular">{formatMoney2(value as number)}</span>;
     case 'money':
       return <span className="tabular">{formatMoney(value as number)}</span>;
     case 'date':
@@ -275,7 +285,16 @@ export function EntityManager({
                     ) : null}
                     {def.columns.map((c, i) => (
                       <TD key={c.path} className={i === 0 ? 'font-medium' : 'text-muted'}>
-                        <Cell col={c} row={row} />
+                        {i === 0 && def.detail ? (
+                          <Link
+                            href={`${def.detail}/${row.id as string}`}
+                            className="text-gold underline-offset-4 hover:underline"
+                          >
+                            <Cell col={c} row={row} />
+                          </Link>
+                        ) : (
+                          <Cell col={c} row={row} />
+                        )}
                       </TD>
                     ))}
                     <TD>

@@ -61,3 +61,6 @@ const FINANCE = ['tech_superadmin', 'director_vp', 'ops_admin', 'finance'];
 const COMPLIANCE = ['tech_superadmin', 'director_vp', 'ops_admin', 'operations'];
 export const canFinance = (u: Pick<SessionUser, 'roles'>) => has(u, FINANCE);
 export const canCompliance = (u: Pick<SessionUser, 'roles'>) => has(u, COMPLIANCE);
+
+const COLLECT = ['tech_superadmin', 'director_vp', 'ops_admin', 'finance', 'sales_manager'];
+export const canCollect = (u: Pick<SessionUser, 'roles'>) => has(u, COLLECT);

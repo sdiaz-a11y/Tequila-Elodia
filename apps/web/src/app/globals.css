@@ -247,3 +247,31 @@ input:-webkit-autofill:focus {
 .font-display {
   font-variant-numeric: lining-nums;
 }
+
+/* Print (quotes and orders as PDF): no app chrome, light tokens so the page is readable on paper. */
+@media print {
+  aside,
+  header.sticky,
+  nav[aria-label='Navegación principal'],
+  [data-no-print] {
+    display: none !important;
+  }
+  :root {
+    --background: #ffffff;
+    --sidebar: #ffffff;
+    --surface: #ffffff;
+    --surface-secondary: #f4f4f4;
+    --text-primary: #111111;
+    --text-secondary: #444444;
+    --border: #cccccc;
+    --gold-primary: #7d6232;
+    --gold-secondary: #7d6232;
+  }
+  body {
+    background: #fff;
+    color: #111;
+  }
+  * {
+    box-shadow: none !important;
+  }
+}
