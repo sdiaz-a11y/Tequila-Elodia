@@ -53,3 +53,17 @@ export const ROLE_KEYS = [
   'external_distributor',
 ] as const;
 export type RoleKey = (typeof ROLE_KEYS)[number];
+
+/** Display names for the system roles (Spanish, Mexico). */
+export const ROLE_LABELS: Record<RoleKey, string> = {
+  tech_superadmin: 'Superadministrador técnico',
+  director_vp: 'Dirección general',
+  ops_admin: 'Administración operativa',
+  sales_manager: 'Gerente comercial',
+  salesperson: 'Vendedor',
+  marketing: 'Marketing',
+  operations: 'Operaciones',
+  finance: 'Finanzas',
+  collaborator: 'Colaborador',
+  external_distributor: 'Distribuidor externo',
+};

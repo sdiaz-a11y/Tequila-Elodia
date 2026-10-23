@@ -1,22 +1,9 @@
 import path from 'node:path';
 import { config as loadEnv } from 'dotenv';
-import { ACTIONS, RESOURCES, ROLE_KEYS, grantsForRole, type RoleKey } from '@elodia/shared';
+import { ACTIONS, RESOURCES, ROLE_KEYS, ROLE_LABELS, grantsForRole } from '@elodia/shared';
 import { createPrismaClient } from './client';
 
 loadEnv({ path: path.resolve(__dirname, '../../../.env'), quiet: true });
-
-const ROLE_NAMES: Record<RoleKey, string> = {
-  tech_superadmin: 'Superadministrador técnico',
-  director_vp: 'Dirección general',
-  ops_admin: 'Administración operativa',
-  sales_manager: 'Gerente comercial',
-  salesperson: 'Vendedor',
-  marketing: 'Marketing',
-  operations: 'Operaciones',
-  finance: 'Finanzas',
-  collaborator: 'Colaborador',
-  external_distributor: 'Distribuidor externo',
-};
 
 export const DEFAULT_ORG_NAME = 'ELODIA';
 
@@ -41,8 +28,8 @@ export async function seed(
       for (const key of ROLE_KEYS) {
         const role = await tx.role.upsert({
           where: { organizationId_key: { organizationId: org.id, key } },
-          update: { name: ROLE_NAMES[key] },
-          create: { organizationId: org.id, key, name: ROLE_NAMES[key], isSystem: true },
+          update: { name: ROLE_LABELS[key] },
+          create: { organizationId: org.id, key, name: ROLE_LABELS[key], isSystem: true },
         });
         // The default matrix is the source of truth for system roles: re-seeding resets it.
         await tx.rolePermission.deleteMany({ where: { roleId: role.id } });
