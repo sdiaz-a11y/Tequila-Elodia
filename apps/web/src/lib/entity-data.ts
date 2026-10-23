@@ -30,6 +30,7 @@ const safeTerm = (q: string) => q.replace(/[^\p{L}\p{N}\s@._+-]/gu, ' ').trim();
 export async function listRows(supabase: SupabaseClient, def: EntityDef, p: ListParams) {
   let query = supabase.from(def.table).select(def.select, { count: 'exact' });
   if (def.softDelete) query = query.is('deleted_at', null);
+  if (def.base) query = query.in(def.base.column, [...def.base.values]);
   for (const [name, value] of Object.entries(p.filters)) query = query.eq(name, value);
   const term = safeTerm(p.q);
   if (term && def.search.length)

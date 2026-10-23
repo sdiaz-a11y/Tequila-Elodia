@@ -44,6 +44,10 @@ export function entityPermissions(
   user: Pick<SessionUser, 'roles'>,
   key: string,
 ): { read: boolean; write: boolean; remove: boolean } {
+  if (key === 'objectives')
+    return { read: canRead(user), write: canManage(user), remove: canApprove(user) };
+  if (key === 'social_posts')
+    return { read: canRead(user), write: canContent(user), remove: false };
   if (key === 'warehouses' || key === 'lots') {
     const ok = canInventory(user);
     return { read: canRead(user), write: ok, remove: canApprove(user) };

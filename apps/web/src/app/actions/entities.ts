@@ -45,6 +45,8 @@ const paths: Record<string, string[]> = {
   warehouses: ['/almacenes', '/inventario'],
   lots: ['/lotes', '/inventario'],
   pipeline_stages: ['/configuracion', '/pipeline'],
+  objectives: ['/planeacion'],
+  social_posts: ['/redes', '/calendario'],
 };
 
 export async function saveRow(key: string, id: string | null, input: unknown): Promise<SaveResult> {

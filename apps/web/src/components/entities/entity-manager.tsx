@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   Check,
+  TrendingUp,
   Send,
   ChevronLeft,
   ChevronRight,
@@ -47,6 +48,7 @@ import {
   isOverdue,
 } from '@/lib/format';
 import { EntityFormDialog } from './entity-form-dialog';
+import { ProgressDialog } from './progress-dialog';
 
 const PAGE_SIZE = 20;
 type Row = Record<string, unknown>;
@@ -59,6 +61,27 @@ function Cell({ col, row }: { col: Column; row: Row }) {
     case 'badge': {
       const label = col.options?.find((o) => o.value === value)?.label ?? String(value);
       return <Badge tone={value === 'active' ? 'success' : 'gold'}>{label}</Badge>;
+    }
+    case 'progress': {
+      const target = Number(row.target) || 0;
+      const current = Number(value) || 0;
+      const pct = target > 0 ? Math.min(100, Math.round((current / target) * 100)) : 0;
+      const unit = String(row.unit ?? '');
+      return (
+        <span className="grid min-w-40 gap-1">
+          <span className="tabular text-xs">
+            {new Intl.NumberFormat('es-MX', { maximumFractionDigits: 2 }).format(current)} /{' '}
+            {new Intl.NumberFormat('es-MX', { maximumFractionDigits: 2 }).format(target)} {unit} ·{' '}
+            {pct} %
+          </span>
+          <span className="h-1.5 overflow-hidden rounded-full bg-surface-3" aria-hidden>
+            <span
+              className={`block h-full rounded-full ${pct >= 100 ? 'bg-success' : 'bg-gold'}`}
+              style={{ width: `${pct}%` }}
+            />
+          </span>
+        </span>
+      );
     }
     case 'money2':
       return <span className="tabular">{formatMoney2(value as number)}</span>;
@@ -106,6 +129,7 @@ export function EntityManager({
   canWrite,
   canDelete,
   canApprove = false,
+  canLog = false,
 }: {
   def: EntityDef;
   rows: Row[];
@@ -117,6 +141,8 @@ export function EntityManager({
   canWrite: boolean;
   canDelete: boolean;
   canApprove?: boolean;
+  /** May register progress on objectives. */
+  canLog?: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -125,6 +151,7 @@ export function EntityManager({
   const [search, setSearch] = useState(q);
   const [editing, setEditing] = useState<Row | 'new' | null>(null);
   const [removing, setRemoving] = useState<Row | null>(null);
+  const [logging, setLogging] = useState<Row | null>(null);
   const [busy, setBusy] = useState(false);
   const first = useRef(true);
 
@@ -220,7 +247,7 @@ export function EntityManager({
             ))}
           </Select>
         ))}
-        {canWrite ? (
+        {canWrite && !def.noCreate ? (
           <Button variant="primary" className="ml-auto" onClick={() => setEditing('new')}>
             <Plus aria-hidden />
             {article} {def.singular}
@@ -239,7 +266,7 @@ export function EntityManager({
                 : def.empty.description
             }
             action={
-              canWrite && !filtered ? (
+              canWrite && !filtered && !def.noCreate ? (
                 <Button variant="primary" onClick={() => setEditing('new')}>
                   <Plus aria-hidden />
                   {article} {def.singular}
@@ -298,7 +325,7 @@ export function EntityManager({
                       </TD>
                     ))}
                     <TD>
-                      {canWrite || canDelete ? (
+                      {canWrite || canDelete || (def.key === 'objectives' && canLog) ? (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon" aria-label="Acciones">
@@ -322,6 +349,12 @@ export function EntityManager({
                               >
                                 <Check aria-hidden />
                                 Aprobar documento
+                              </DropdownMenuItem>
+                            ) : null}
+                            {def.key === 'objectives' && canLog ? (
+                              <DropdownMenuItem onSelect={() => setLogging(row)}>
+                                <TrendingUp aria-hidden />
+                                Registrar avance
                               </DropdownMenuItem>
                             ) : null}
                             {canWrite ? (
@@ -393,6 +426,23 @@ export function EntityManager({
         }}
         save={(id, values) => saveRow(def.key, id, values)}
       />
+
+      {logging ? (
+        <ProgressDialog
+          objective={{
+            id: logging.id as string,
+            title: logging.title as string,
+            current_value: Number(logging.current_value),
+            target: Number(logging.target),
+            unit: String(logging.unit ?? ''),
+          }}
+          onClose={() => setLogging(null)}
+          onSaved={() => {
+            setLogging(null);
+            router.refresh();
+          }}
+        />
+      ) : null}
 
       <AlertDialog open={removing !== null} onOpenChange={(o) => !o && setRemoving(null)}>
         <AlertDialogContent

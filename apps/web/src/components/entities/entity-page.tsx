@@ -1,7 +1,7 @@
 import { AccessDenied } from '@/components/ui/access-denied';
 import { ENTITIES, type EntityKey } from '@/lib/entities';
 import { listRows, loadRelations, parseListParams, relationKeysOf } from '@/lib/entity-data';
-import { canApprove, entityPermissions } from '@/lib/roles';
+import { canApprove, canOps, entityPermissions } from '@/lib/roles';
 import { getSessionUser } from '@/lib/session';
 import { createSupabase } from '@/lib/supabase/server';
 import { EntityManager } from './entity-manager';
@@ -54,6 +54,7 @@ export async function EntityPage({
         canWrite={perms.write}
         canDelete={perms.remove}
         canApprove={canApprove(user)}
+        canLog={canOps(user)}
       />
     </div>
   );

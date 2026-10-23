@@ -60,7 +60,7 @@ export interface Column {
   /** Dot path into the row, e.g. `owner.name`. */
   path: string;
   label: string;
-  as?: 'text' | 'badge' | 'money' | 'money2' | 'date' | 'datetime' | 'bool' | 'expiry';
+  as?: 'text' | 'badge' | 'money' | 'money2' | 'date' | 'datetime' | 'bool' | 'expiry' | 'progress';
   /** Maps a raw value to a label (and tone for badges). */
   options?: readonly Option[];
 }
@@ -80,6 +80,10 @@ export interface EntityDef {
   filters: readonly { name: string; label: string; options: readonly Option[] }[];
   order: { column: string; ascending: boolean };
   softDelete?: boolean;
+  /** No "new" button: rows are created elsewhere and only edited here. */
+  noCreate?: boolean;
+  /** Fixed filter: only rows whose column is one of these values. */
+  base?: { column: string; values: readonly string[] };
   /** Base path of a detail page; the first column then links to `${detail}/${id}`. */
   detail?: string;
   empty: { title: string; description: string };
@@ -104,7 +108,9 @@ export type EntityKey =
   | 'orders'
   | 'warehouses'
   | 'lots'
-  | 'pipeline_stages';
+  | 'pipeline_stages'
+  | 'objectives'
+  | 'social_posts';
 
 const opts = (...pairs: [string, string][]): Option[] =>
   pairs.map(([value, label]) => ({ value, label }));
@@ -179,7 +185,95 @@ export const DOC_STATUS = opts(
 );
 const TX_KINDS = opts(['income', 'Ingreso'], ['expense', 'Egreso']);
 
+const OBJECTIVE_STATUS = opts(
+  ['active', 'En curso'],
+  ['achieved', 'Lograda'],
+  ['missed', 'No lograda'],
+  ['cancelled', 'Cancelada'],
+);
+
 export const ENTITIES: Record<EntityKey, EntityDef> = {
+  objectives: {
+    key: 'objectives',
+    table: 'objectives',
+    singular: 'meta',
+    plural: 'Planeación estratégica',
+    isFeminine: true,
+    select: '*, owner:profiles!owner_id(name)',
+    search: ['title'],
+    order: { column: 'created_at', ascending: false },
+    filters: [{ name: 'status', label: 'Todos los estados', options: OBJECTIVE_STATUS }],
+    fields: [
+      {
+        name: 'title',
+        label: 'Objetivo',
+        type: 'text',
+        required: true,
+        hint: 'Por ejemplo: Vender 2,000 botellas en el trimestre.',
+      },
+      { name: 'target', label: 'Meta (número)', type: 'number', required: true },
+      { name: 'unit', label: 'Unidad', type: 'text', hint: 'botellas, pesos, distribuidores…' },
+      {
+        name: 'status',
+        label: 'Estado',
+        type: 'select',
+        required: true,
+        options: OBJECTIVE_STATUS,
+      },
+      { name: 'starts_on', label: 'Inicio', type: 'date' },
+      { name: 'ends_on', label: 'Fecha límite', type: 'date' },
+      { name: 'owner_id', label: 'Responsable', type: 'relation', relation: 'profiles' },
+      { name: 'description', label: 'Cómo se mide', type: 'textarea' },
+    ],
+    columns: [
+      { path: 'title', label: 'Objetivo' },
+      { path: 'current_value', label: 'Avance', as: 'progress' },
+      { path: 'status', label: 'Estado', as: 'badge', options: OBJECTIVE_STATUS },
+      { path: 'ends_on', label: 'Fecha límite', as: 'date' },
+      { path: 'owner.name', label: 'Responsable' },
+    ],
+    empty: {
+      title: 'Aún no hay metas',
+      description:
+        'Define lo que quieres lograr, con un número y una fecha, y registra el avance conforme pase el tiempo.',
+    },
+  },
+  social_posts: {
+    key: 'social_posts',
+    table: 'content_items',
+    singular: 'publicación',
+    plural: 'Redes sociales',
+    isFeminine: true,
+    noCreate: true,
+    base: { column: 'status', values: ['approved', 'published'] },
+    select: '*',
+    search: ['title'],
+    order: { column: 'scheduled_at', ascending: false },
+    filters: [{ name: 'channel', label: 'Todos los canales', options: CHANNELS }],
+    fields: [
+      { name: 'post_url', label: 'Enlace de la publicación', type: 'url' },
+      { name: 'reach', label: 'Alcance', type: 'number', integer: true },
+      { name: 'engagement', label: 'Interacciones', type: 'number', integer: true },
+    ],
+    columns: [
+      { path: 'title', label: 'Publicación' },
+      { path: 'channel', label: 'Canal', as: 'badge', options: CHANNELS },
+      {
+        path: 'status',
+        label: 'Estado',
+        as: 'badge',
+        options: opts(['approved', 'Aprobada'], ['published', 'Publicada']),
+      },
+      { path: 'scheduled_at', label: 'Fecha', as: 'datetime' },
+      { path: 'reach', label: 'Alcance' },
+      { path: 'engagement', label: 'Interacciones' },
+    ],
+    empty: {
+      title: 'Aún no hay publicaciones aprobadas',
+      description:
+        'Aquí aparecen las piezas aprobadas en el calendario editorial, para registrar su enlace y sus resultados.',
+    },
+  },
   warehouses: {
     key: 'warehouses',
     table: 'warehouses',
