@@ -3,9 +3,12 @@
 ## Autenticación y sesiones
 - Contraseñas con **argon2id**; política mínima (12+ caracteres), verificación contra contraseñas filtradas opcional.
 - Sesión server-side: token aleatorio de 256 bits, se guarda solo su hash en `sessions`; cookie `httpOnly; Secure; SameSite=Lax`; expiración absoluta e inactividad; revocación y "cerrar todas las sesiones".
-- Protección CSRF: `SameSite` + token/encabezado personalizado en mutaciones.
+- Protección CSRF: `SameSite=Lax` + cabecera personalizada `X-Elodia-Csrf` en mutaciones + validación de `Origin` (implementado, Sprint 1.4).
 - 2FA TOTP opcional, obligatorio para `tech_superadmin` y `director_vp` (propuesto).
-- Bloqueo progresivo tras intentos fallidos + rate limiting en login/recuperación.
+- Bloqueo progresivo: tras el 5.º fallo consecutivo la cuenta se bloquea 1, 2, 4… min (máx. 60); mientras está bloqueada incluso la contraseña correcta falla, con la misma respuesta genérica 401. Rate limiting por IP en `POST /auth/login` (`LOGIN_RATE_LIMIT`, 5/min por defecto). Recuperación de acceso: pendiente (Sprint 1.6).
+- Respuestas de login indistinguibles (usuario inexistente / contraseña errónea / desactivado / bloqueado) y con coste de CPU equivalente (verificación ficticia).
+- Sesión: token de 256 bits, solo su SHA-256 en BD; expiración absoluta (`SESSION_TTL_HOURS`, 12 h) e inactividad (`SESSION_IDLE_MINUTES`, 120 min); los permisos se releen en cada petición (un cambio de rol aplica de inmediato). Activar 2FA revoca las demás sesiones.
+- 2FA TOTP (RFC 6238) opcional; secreto cifrado en reposo con AES-256-GCM (`APP_ENCRYPTION_KEY`). **Aún no es obligatorio** para `tech_superadmin`/`director_vp` (pendiente de decidir).
 
 ## Autorización (RBAC por recurso, acción y alcance)
 - Guard global **deny-by-default**: cada endpoint declara `@Requires('resource', 'action')`; sin decorador → 403.

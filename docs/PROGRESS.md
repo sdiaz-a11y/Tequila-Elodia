@@ -1,6 +1,6 @@
 # PROGRESS — ELODIA OS
 
-**Fase actual:** Fase 1 — Sprints 1.1, 1.2 y 1.3 completados; siguiente: 1.4 (autenticación: login, sesiones, 2FA, guard deny-by-default)
+**Fase actual:** Fase 1 — Sprints 1.1 a 1.4 completados; siguiente: 1.5 (web base: shell, login, design system)
 **Última actualización:** 2026-10-22
 
 ## Módulos completados
@@ -66,3 +66,13 @@ N/A (fase solo documental). Verificado: versiones de herramientas del entorno.
 - Rate limiting global (120/min) ya activo; límites estrictos para login llegan en el 1.4.
 - Verificado ejecutando: lint, typecheck, build y 25 tests OK (14 api, 10 shared, 1 web; más 3 de integración de database). Pruebas e2e con supertest del filtro/request-id/health; auditoría probada contra Supabase con rollback. API compilada arrancada contra Supabase: `/health` 200, `/health/ready` 200, ruta inexistente 404.
 - Pendiente: la auditoría se invocará desde cada módulo (no hay interceptor automático: cada escritura decide qué registra); OpenAPI sigue básico hasta tener endpoints reales.
+
+## Sprint 1.4 (2026-10-22) — Autenticación y autorización
+- `apps/api/src/auth/`: login (argon2id), sesiones server-side en cookie `HttpOnly`/`SameSite=Lax` (`__Host-` + `Secure` en producción), logout, logout-all, `GET /auth/me`, 2FA TOTP opcional (setup/enable/disable) con secreto cifrado AES-256-GCM.
+- Guards globales en orden: rate limit → CSRF → sesión → permisos. **Deny-by-default**: rutas sin `@Public()`/`@Authenticated()`/`@Requires()` → 403. Alcance (`own|team|all`) disponible en `req.scope`.
+- Bloqueo progresivo de cuenta, rate limit de login por IP (429), respuestas de error indistinguibles, auditoría de login/fallos/bloqueos/logout/2FA.
+- Migraciones `…_auth_columns` (lock, TOTP, last_seen) y `…_audit_user_restrict` aplicadas en Supabase.
+- CLI `pnpm --filter @elodia/api create-user -- --email … --name … --role …` (contraseña por `NEW_USER_PASSWORD`, nunca por argumento). **No se creó ningún usuario real**: falta el correo del superadmin técnico/VP (decisión 7).
+- Bug corregido: `loginSchema` rechazaba correos con espacios en vez de normalizarlos (Zod valida antes del transform).
+- Verificado ejecutando: lint, typecheck, build y 51 tests OK (incl. 11 de integración de auth contra Supabase y vectores RFC 6238). Probado con la API real: CLI crea usuario → login 200 con cookie HttpOnly → `/me` 200 → sin cookie 401 → logout 204 → `/me` 401.
+- Pendiente: recuperación de acceso por correo (requiere proveedor de email: decisión), 2FA obligatorio para roles altos (D19), cambio de contraseña (Sprint 1.6 con administración de usuarios), invalidación de sesiones al desactivar un usuario ya efectiva (se valida `status` en cada petición).

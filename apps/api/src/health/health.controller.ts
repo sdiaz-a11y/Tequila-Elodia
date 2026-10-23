@@ -1,8 +1,10 @@
 import { Controller, Get, ServiceUnavailableException } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { healthResponseSchema, type HealthResponse } from '@elodia/shared';
+import { Public } from '../auth/auth.types';
 import { PrismaService } from '../core/prisma/prisma.service';
 
+@Public()
 @ApiTags('health')
 @Controller('health')
 export class HealthController {

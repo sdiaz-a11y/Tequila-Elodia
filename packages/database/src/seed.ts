@@ -18,15 +18,18 @@ const ROLE_NAMES: Record<RoleKey, string> = {
   external_distributor: 'Distribuidor externo',
 };
 
-const ORG_NAME = 'ELODIA';
+export const DEFAULT_ORG_NAME = 'ELODIA';
 
 /** Idempotent: seeds the organization, the permission catalog, system roles and their grants. No users and no business data. */
-export async function seed(prisma = createPrismaClient()): Promise<void> {
+export async function seed(
+  prisma = createPrismaClient(),
+  orgName = DEFAULT_ORG_NAME,
+): Promise<void> {
   await prisma.$transaction(
     async (tx) => {
       const org =
-        (await tx.organization.findFirst({ where: { name: ORG_NAME } })) ??
-        (await tx.organization.create({ data: { name: ORG_NAME } }));
+        (await tx.organization.findFirst({ where: { name: orgName } })) ??
+        (await tx.organization.create({ data: { name: orgName } }));
 
       await tx.permission.createMany({
         data: RESOURCES.flatMap((resource) => ACTIONS.map((action) => ({ resource, action }))),

@@ -4,7 +4,7 @@ Base: `/api/v1` · Formato JSON · Documentación interactiva OpenAPI en `/api/d
 
 ## Convenciones
 - REST por recurso, sustantivos en plural, kebab-case: `/leads`, `/opportunities/{id}/activities`.
-- Autenticación por cookie de sesión; mutaciones requieren cabecera `X-CSRF-Token`.
+- Autenticación por cookie de sesión; toda mutación (POST/PUT/PATCH/DELETE) requiere la cabecera `X-Elodia-Csrf: 1` y, si el navegador envía `Origin`, debe estar en `WEB_ORIGIN`. Cookie `elodia_session` (`__Host-elodia_session` en producción): `HttpOnly`, `SameSite=Lax`, `Secure` en producción.
 - Paginación: `?page=1&pageSize=25` → `{ "data": [...], "meta": { "page", "pageSize", "total" } }`. Máximo 100.
 - Filtros: `?status=open&ownerId=…&q=texto&createdFrom=…&createdTo=…`; orden: `?sort=-createdAt`.
 - Errores `application/problem+json`: `{ type, title, status, detail, code, errors?: [{path, message}] }`.
@@ -17,7 +17,7 @@ Base: `/api/v1` · Formato JSON · Documentación interactiva OpenAPI en `/api/d
 
 | Área | Rutas |
 |---|---|
-| Auth | `POST /auth/login` · `POST /auth/logout` · `GET /auth/me` · `POST /auth/2fa/*` |
+| Auth (implementado) | `POST /auth/login` (límite `LOGIN_RATE_LIMIT`/min por IP) · `POST /auth/logout` · `POST /auth/logout-all` · `GET /auth/me` · `POST /auth/2fa/setup` · `POST /auth/2fa/enable` · `POST /auth/2fa/disable` |
 | IAM | `/users` · `/roles` · `/permissions` · `/audit-logs` (GET) |
 | CRM | `/accounts` · `/contacts` · `/leads` (+`POST /leads/{id}/convert`) · `/pipeline-stages` · `/opportunities` (+`POST /opportunities/{id}/move`) · `/activities` |
 | Red | `/territories` · `/distributors` · `/expansion-plans` (+`/updates`) |
@@ -25,4 +25,6 @@ Base: `/api/v1` · Formato JSON · Documentación interactiva OpenAPI en `/api/d
 | Producto/Marca | `/products` · `/variants` · `/brand-kit` · `/brand-assets` · `/files/presign` |
 | Dashboard | `GET /dashboard/summary?from&to` (datos reales; vacío si no hay) |
 
-Cada endpoint declara su permiso `resource:action` en OpenAPI (`x-permission`).
+Cada endpoint declara su permiso `resource:action` (`@Requires('accounts','read')`). **Deny-by-default**: una ruta sin `@Public()`, `@Authenticated()` o `@Requires()` responde 403 aunque el usuario tenga sesión. Los errores 401 de login traen `code`: `totp_required` / `totp_invalid`.
+
+Health: `GET /health` (liveness) y `GET /health/ready` (BD), ambos públicos.

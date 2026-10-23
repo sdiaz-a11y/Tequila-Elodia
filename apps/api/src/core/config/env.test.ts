@@ -21,9 +21,15 @@ describe('parseEnv', () => {
 
   it('requires DATABASE_URL in production without echoing values', () => {
     expect(() => parseEnv({ NODE_ENV: 'production' })).toThrow(/DATABASE_URL/);
-    expect(parseEnv({ NODE_ENV: 'production', DATABASE_URL: 'postgresql://x' }).DATABASE_URL).toBe(
-      'postgresql://x',
+    const key = Buffer.alloc(32, 1).toString('base64');
+    expect(() => parseEnv({ NODE_ENV: 'production', DATABASE_URL: 'postgresql://x' })).toThrow(
+      /APP_ENCRYPTION_KEY/,
     );
+    expect(
+      parseEnv({ NODE_ENV: 'production', DATABASE_URL: 'postgresql://x', APP_ENCRYPTION_KEY: key })
+        .DATABASE_URL,
+    ).toBe('postgresql://x');
+    expect(() => parseEnv({ APP_ENCRYPTION_KEY: 'short' })).toThrow(/APP_ENCRYPTION_KEY/);
     try {
       parseEnv({ PORT: 'super-secret-value' });
     } catch (e) {

@@ -15,6 +15,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { paginationQuerySchema } from '@elodia/shared';
 import { AppModule } from '../../app.module';
+import { Public } from '../../auth/auth.types';
 import { configureApp } from '../../app.setup';
 import { parseEnv } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
@@ -22,6 +23,7 @@ import { ZodValidationPipe } from '../validation/zod-validation.pipe';
 
 const bodySchema = z.object({ name: z.string().min(2) });
 
+@Public()
 @Controller('probe')
 class ProbeController {
   @Post('validate')
@@ -97,7 +99,11 @@ describe('HTTP layer (RFC 7807, request id, health)', () => {
   });
 
   it('returns 400 problem+json with field errors for invalid bodies', async () => {
-    const res = await http().post('/api/v1/probe/validate').send({ name: 'a' }).expect(400);
+    const res = await http()
+      .post('/api/v1/probe/validate')
+      .set('x-elodia-csrf', '1')
+      .send({ name: 'a' })
+      .expect(400);
     expect(res.headers['content-type']).toContain('application/problem+json');
     expect(res.body).toMatchObject({
       status: 400,

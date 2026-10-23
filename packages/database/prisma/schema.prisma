@@ -77,16 +77,19 @@ model Organization {
 }
 
 model User {
-  id             String     @id @default(uuid(7)) @db.Uuid
-  organizationId String     @map("organization_id") @db.Uuid
-  email          String
-  passwordHash   String?    @map("password_hash")
-  name           String
-  status         UserStatus @default(invited)
-  lastLoginAt    DateTime?  @map("last_login_at") @db.Timestamptz(6)
-  totpSecretEnc  String?    @map("totp_secret_enc")
-  createdAt      DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt      DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id               String     @id @default(uuid(7)) @db.Uuid
+  organizationId   String     @map("organization_id") @db.Uuid
+  email            String
+  passwordHash     String?    @map("password_hash")
+  name             String
+  status           UserStatus @default(invited)
+  lastLoginAt      DateTime?  @map("last_login_at") @db.Timestamptz(6)
+  totpSecretEnc    String?    @map("totp_secret_enc")
+  totpEnabledAt    DateTime?  @map("totp_enabled_at") @db.Timestamptz(6)
+  failedLoginCount Int        @default(0) @map("failed_login_count")
+  lockedUntil      DateTime?  @map("locked_until") @db.Timestamptz(6)
+  createdAt        DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   roles        UserRole[]
@@ -151,14 +154,15 @@ model UserRole {
 }
 
 model Session {
-  id        String    @id @default(uuid(7)) @db.Uuid
-  userId    String    @map("user_id") @db.Uuid
-  tokenHash String    @unique @map("token_hash")
-  ip        String?
-  userAgent String?   @map("user_agent")
-  expiresAt DateTime  @map("expires_at") @db.Timestamptz(6)
-  revokedAt DateTime? @map("revoked_at") @db.Timestamptz(6)
-  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  id         String    @id @default(uuid(7)) @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  tokenHash  String    @unique @map("token_hash")
+  ip         String?
+  userAgent  String?   @map("user_agent")
+  expiresAt  DateTime  @map("expires_at") @db.Timestamptz(6)
+  revokedAt  DateTime? @map("revoked_at") @db.Timestamptz(6)
+  lastSeenAt DateTime  @default(now()) @map("last_seen_at") @db.Timestamptz(6)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -333,7 +337,7 @@ model AuditLog {
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  user         User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user         User?        @relation(fields: [userId], references: [id], onDelete: Restrict)
 
   @@index([organizationId, createdAt])
   @@index([organizationId, resource, resourceId])

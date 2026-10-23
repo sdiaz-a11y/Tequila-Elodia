@@ -18,6 +18,11 @@ Registro de decisiones técnicas y de producto (ADR ligero). Una fila por decisi
 | D12 | 2026-10-22 | Matriz inicial de permisos por rol en `packages/shared/src/default-grants.ts` | Propuesta de arranque (deny-by-default); el negocio debe validarla. El seed la reaplica a los roles de sistema. | Propuesta |
 | D13 | 2026-10-22 | `DIRECT_URL` por Session pooler de Supabase | Evita depender de IPv6; soporta migraciones. | Vigente |
 | D14 | 2026-10-22 | IDs `uuid(7)` generados por Prisma (no por la BD) | Orden temporal en índices. Inserciones SQL manuales deben aportar `id`. | Vigente |
+| D15 | 2026-10-22 | `audit_logs.user_id` con `ON DELETE RESTRICT` | `SET NULL` chocaba con el trigger append-only. Los usuarios con historial no se borran, se desactivan. | Vigente |
+| D16 | 2026-10-22 | CSRF: cabecera `X-Elodia-Csrf` + validación de `Origin` (sin token por sesión) | Suficiente con `SameSite=Lax` y CORS restringido; evita estado extra. | Vigente |
+| D17 | 2026-10-22 | `@node-rs/argon2` (argon2id, binarios precompilados) | Sin compilación nativa en Windows/CI. | Vigente |
+| D18 | 2026-10-22 | Pruebas de integración usan la organización `ELODIA-TEST` | Los rastros de auditoría (inmutables) quedan fuera de los datos reales de ELODIA. | Vigente |
+| D19 | 2026-10-22 | 2FA obligatorio para superadmin/VP: **pendiente** | Hoy es opcional; exigirlo requiere flujo de alta en el primer login. | Abierta |
 
 ## Notas de fases
 El prompt maestro numera las fases distinto al backlog de [ROADMAP.md](ROADMAP.md) (p. ej. CRM es "Fase 2" allí y sprint 1.7 aquí). Se sigue el ROADMAP, aprobado por el usuario el 2026-10-22; el contenido total es el mismo.

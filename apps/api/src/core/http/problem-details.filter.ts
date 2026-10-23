@@ -82,14 +82,17 @@ export class ProblemDetailsFilter implements ExceptionFilter {
     if (exception instanceof HttpException) {
       const status = exception.getStatus();
       const body = exception.getResponse();
-      const raw =
-        typeof body === 'string' ? body : (body as { message?: string | string[] }).message;
-      const detail = Array.isArray(raw) ? raw.join('; ') : raw;
+      const parsed =
+        typeof body === 'string'
+          ? { message: body }
+          : (body as { message?: string | string[]; code?: string });
+      const detail = Array.isArray(parsed.message) ? parsed.message.join('; ') : parsed.message;
       return {
         type: 'about:blank',
         title: TITLES[status] ?? exception.name,
         status,
         detail: status >= 500 ? undefined : detail,
+        code: status < 500 && typeof parsed.code === 'string' ? parsed.code : undefined,
       };
     }
     if (isPrismaKnownError(exception)) {
