@@ -48,11 +48,16 @@ describe('navigation', () => {
       '/aprobaciones',
       '/productos',
       '/presentaciones',
+      '/inventario',
+      '/almacenes',
+      '/lotes',
       '/cumplimiento',
       '/finanzas',
       '/proyectos',
       '/tareas',
       '/equipo',
+      '/automatizaciones',
+      '/configuracion',
       '/auditoria',
     ]);
   });

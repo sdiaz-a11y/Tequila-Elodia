@@ -186,3 +186,33 @@ export async function deletePayment(orderId: string, paymentId: string): Promise
   revalidatePath(`/pedidos/${orderId}`);
   return { ok: true };
 }
+
+const shipSchema = z.object({
+  carrier: z.string().trim().max(80).nullish(),
+  tracking: z.string().trim().max(120).nullish(),
+});
+
+/** Marks the order as shipped and records who carries it. The inventory movement is done by the database. */
+export async function shipOrder(id: string, input: unknown): Promise<SalesResult> {
+  const denied = await guard();
+  if (denied) return denied;
+  if (!z.uuid().safeParse(id).success) return { ok: false, error: 'Solicitud inválida.' };
+  const parsed = shipSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: 'Datos inválidos.' };
+  const supabase = await createSupabase();
+  const { data, error } = await supabase
+    .from('orders')
+    .update({
+      status: 'shipped',
+      carrier: parsed.data.carrier || null,
+      tracking: parsed.data.tracking || null,
+    })
+    .eq('id', id)
+    .select('id');
+  if (error) return { ok: false, error: explainDbError(error) };
+  if (!data?.length) return { ok: false, error: 'No tienes permiso o el pedido ya no existe.' };
+  revalidatePath(`/pedidos/${id}`);
+  revalidatePath('/pedidos');
+  revalidatePath('/inventario');
+  return { ok: true };
+}

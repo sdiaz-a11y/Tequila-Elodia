@@ -219,10 +219,104 @@ try {
   await admin.from('payments').delete().eq('order_id', oid);
   await admin.from('orders').delete().eq('id', oid);
   await admin.from('quotes').delete().eq('id', qid);
+
+  // Inventory: ledger rules, reservation on confirm, shipping and cancelling.
+  const opsC = await asRole('operations');
+  const { data: wh } = await admin.from('warehouses').insert({ name: `rls-wh-${Date.now().toString(36)}`, is_default: true }).select('id').single();
+  r = await sales.from('inventory_movements').insert({ variant_id: variant.id, warehouse_id: wh.id, kind: 'in', qty: 10 }).select('id');
+  t('salesperson cannot register inventory movements', !r.data?.length, r.error?.code);
+  r = await opsC.from('inventory_movements').insert({ variant_id: variant.id, warehouse_id: wh.id, kind: 'in', qty: 10, reason: 'rls' }).select('id');
+  t('operations registers a stock entry', !!r.data?.length, r.error?.message);
+  const mid = r.data?.[0]?.id;
+  r = await opsC.from('inventory_movements').update({ qty: 99 }).eq('id', mid).select('id');
+  t('a movement can never be edited', !r.data?.length, r.error?.code);
+  r = await opsC.from('inventory_movements').delete().eq('id', mid).select('id');
+  t('a movement can never be deleted by a user', !r.data?.length, r.error?.code);
+  r = await opsC.from('inventory_movements').insert({ variant_id: variant.id, warehouse_id: wh.id, kind: 'out', qty: 11 }).select('id');
+  t('taking out more than the stock is refused', !r.data?.length, r.error?.message);
+  r = await opsC.from('inventory_movements').insert({ variant_id: variant.id, warehouse_id: wh.id, kind: 'adjust', qty: -11 }).select('id');
+  t('an adjustment below zero is refused', !r.data?.length, r.error?.message);
+  r = await opsC.from('inventory_movements').insert({ variant_id: variant.id, warehouse_id: wh.id, kind: 'in', qty: -3 }).select('id');
+  t('a negative entry is refused', !r.data?.length, r.error?.code);
+  await admin.from('automation_settings').update({ enabled: true }).eq('key', 'reserve_on_confirm');
+  const mkOrder = async (qty) => {
+    const { data: o } = await admin.from('orders').insert({ account_id: acc.id }).select('id').single();
+    await admin.from('order_items').insert({ order_id: o.id, variant_id: variant.id, description: 'rls', quantity: qty, unit_price: 1000, discount_pct: 0, tax_rate: 16 });
+    return o.id;
+  };
+  const o1 = await mkOrder(6);
+  r = await sales.from('orders').update({ status: 'confirmed' }).eq('id', o1).select('id');
+  t('confirming an order reserves its stock', !!r.data?.length, r.error?.message);
+  r = await sales.from('inventory_stock').select('on_hand,reserved,available').eq('warehouse_id', wh.id).eq('variant_id', variant.id).single();
+  t('stock shows 10 on hand, 6 reserved, 4 available', Number(r.data?.on_hand) === 10 && Number(r.data?.reserved) === 6 && Number(r.data?.available) === 4, JSON.stringify(r.data));
+  const o2 = await mkOrder(6);
+  r = await sales.from('orders').update({ status: 'confirmed' }).eq('id', o2).select('id');
+  t('an order that exceeds the available stock cannot be confirmed', !r.data?.length, r.error?.message);
+  r = await admin.from('orders').select('status').eq('id', o2).single();
+  t('…and it stays pending (nothing half-done)', r.data?.status === 'pending');
+  r = await opsC.from('inventory_movements').insert({ variant_id: variant.id, warehouse_id: wh.id, kind: 'out', qty: 5 }).select('id');
+  t('reserved stock cannot be taken out by hand', !r.data?.length, r.error?.message);
+  r = await sales.from('orders').update({ status: 'shipped' }).eq('id', o1).select('id,shipped_at');
+  t('shipping an order stamps the date', !!r.data?.[0]?.shipped_at, r.error?.message);
+  r = await sales.from('inventory_stock').select('on_hand,reserved').eq('warehouse_id', wh.id).eq('variant_id', variant.id).single();
+  t('shipping releases the reservation and takes the stock out (4 on hand, 0 reserved)', Number(r.data?.on_hand) === 4 && Number(r.data?.reserved) === 0, JSON.stringify(r.data));
+  await sales.from('orders').update({ status: 'delivered' }).eq('id', o1);
+  r = await admin.from('orders').select('status,delivered_at').eq('id', o1).single();
+  t('delivery stamps its date', r.data?.status === 'delivered' && !!r.data?.delivered_at, JSON.stringify(r.data));
+  const o3 = await mkOrder(3);
+  await sales.from('orders').update({ status: 'confirmed' }).eq('id', o3);
+  await sales.from('orders').update({ status: 'cancelled' }).eq('id', o3);
+  r = await sales.from('inventory_stock').select('reserved,available').eq('warehouse_id', wh.id).eq('variant_id', variant.id).single();
+  t('cancelling an order frees what it had reserved', Number(r.data?.reserved) === 0 && Number(r.data?.available) === 4, JSON.stringify(r.data));
+  await admin.from('automation_settings').update({ enabled: false }).eq('key', 'reserve_on_confirm');
+  const o4 = await mkOrder(500);
+  r = await sales.from('orders').update({ status: 'confirmed' }).eq('id', o4).select('id');
+  t('with the switch off, orders confirm without touching stock', !!r.data?.length, r.error?.message);
+
+  // Automations: follow-ups are created once.
+  r = await sales.from('automation_settings').update({ enabled: true }).eq('key', 'followup_quote').select('key');
+  t('a salesperson cannot flip automation switches', !r.data?.length, r.error?.code);
+  await admin.from('automation_settings').update({ enabled: true }).in('key', ['followup_quote', 'followup_prospect']);
+  const { data: q2 } = await sales.from('quotes').insert({ account_id: acc.id }).select('id').single();
+  await admin.from('quote_items').insert({ quote_id: q2.id, description: 'x', quantity: 1, unit_price: 100, discount_pct: 0, tax_rate: 16 });
+  await sales.from('quotes').update({ status: 'sent' }).eq('id', q2.id);
+  await sales.from('quotes').update({ status: 'draft' }).eq('id', q2.id);
+  await sales.from('quotes').update({ status: 'sent' }).eq('id', q2.id);
+  r = await admin.from('activities').select('id').eq('automation_key', `quote_sent:${q2.id}`);
+  t('sending a quote (even twice) creates exactly one follow-up activity', r.data?.length === 1, String(r.data?.length));
+  const { data: pa } = await sales.from('accounts').insert({ name: 'rls-sales-prospect', type: 'prospect' }).select('id').single();
+  r = await admin.from('activities').select('subject,owner_id').eq('automation_key', `prospect_new:${pa.id}`);
+  t('a new prospect gets a follow-up call activity', r.data?.length === 1, JSON.stringify(r.data));
+  await admin.from('automation_settings').update({ enabled: false }).in('key', ['followup_quote', 'followup_prospect']);
+  await admin.from('activities').delete().like('automation_key', 'quote_sent:%').eq('account_id', acc.id);
+  await admin.from('activities').delete().eq('account_id', pa.id);
+  await admin.from('accounts').delete().eq('id', pa.id);
+  for (const o of [o1, o2, o3, o4]) await admin.from('orders').delete().eq('id', o);
+  await admin.from('quotes').delete().eq('id', q2.id);
+  await admin.from('inventory_movements').delete().eq('warehouse_id', wh.id);
+  await admin.from('warehouses').delete().eq('id', wh.id);
   await admin.from('product_variants').delete().eq('id', variant.id);
   await admin.from('products').delete().eq('id', prod.id);
   await admin.from('accounts').delete().eq('id', acc.id);
 } finally {
+  // Cleanup in dependency order, even after an interrupted run (the ledger blocks deleting what it references).
+  await admin.from('automation_settings').update({ enabled: false }).neq('key', '');
+  const { data: leftoverVariants } = await admin.from('product_variants').select('id').like('sku', 'RLS-%');
+  const leftoverIds = (leftoverVariants ?? []).map((v) => v.id);
+  if (leftoverIds.length) await admin.from('inventory_movements').delete().in('variant_id', leftoverIds);
+  const { data: leftoverAccounts } = await admin.from('accounts').select('id').like('name', 'rls-%');
+  const accountIds = (leftoverAccounts ?? []).map((a) => a.id);
+  if (accountIds.length) {
+    const { data: os } = await admin.from('orders').select('id').in('account_id', accountIds);
+    for (const o of os ?? []) {
+      await admin.from('payments').delete().eq('order_id', o.id);
+      await admin.from('inventory_movements').delete().eq('order_id', o.id);
+      await admin.from('orders').delete().eq('id', o.id);
+    }
+    await admin.from('quotes').delete().in('account_id', accountIds);
+    await admin.from('activities').delete().in('account_id', accountIds);
+  }
+  await admin.from('warehouses').delete().like('name', 'rls-wh-%');
   await admin.from('accounts').delete().eq('name', 'rls-sales');
   await admin.from('products').delete().eq('name', 'rls-prod');
   await admin.from('transactions').delete().eq('category', 'rls-test');

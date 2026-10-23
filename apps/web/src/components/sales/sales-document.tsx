@@ -21,6 +21,7 @@ import {
   addPayment,
   convertQuote,
   deleteLine,
+  shipOrder,
   deletePayment,
   transitionOrder,
   transitionQuote,
@@ -65,6 +66,10 @@ export interface DocData {
   tax_total: number;
   total: number;
   paid_total?: number;
+  carrier?: string | null;
+  tracking?: string | null;
+  shipped_at?: string | null;
+  delivered_at?: string | null;
 }
 export interface PaymentRow {
   id: string;
@@ -114,6 +119,7 @@ export function SalesDocument({
   const [payOpen, setPayOpen] = useState(false);
   const [removingPay, setRemovingPay] = useState<PaymentRow | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [shipOpen, setShipOpen] = useState(false);
 
   const refresh = () => router.refresh();
   const balance = isQuote ? 0 : Math.round((doc.total - (doc.paid_total ?? 0)) * 100) / 100;
@@ -184,6 +190,14 @@ export function SalesDocument({
         </p>
         {doc.notes ? (
           <p className="max-w-2xl whitespace-pre-wrap text-sm text-muted">{doc.notes}</p>
+        ) : null}
+        {!isQuote && (doc.carrier || doc.tracking || doc.shipped_at) ? (
+          <p className="tabular text-sm text-muted">
+            Envío{doc.carrier ? ` con ${doc.carrier}` : ''}
+            {doc.tracking ? ` · guía ${doc.tracking}` : ''}
+            {doc.shipped_at ? ` · enviado el ${formatDay(doc.shipped_at)}` : ''}
+            {doc.delivered_at ? ` · entregado el ${formatDay(doc.delivered_at)}` : ''}
+          </p>
         ) : null}
       </header>
 
@@ -267,11 +281,7 @@ export function SalesDocument({
             </Button>
           ) : null}
           {!isQuote && doc.status === 'confirmed' ? (
-            <Button
-              variant="primary"
-              loading={busy}
-              onClick={() => void orderAction('ship', 'Pedido enviado')}
-            >
+            <Button variant="primary" loading={busy} onClick={() => setShipOpen(true)}>
               <Truck aria-hidden />
               Marcar como enviado
             </Button>
@@ -577,6 +587,17 @@ export function SalesDocument({
         />
       ) : null}
 
+      <ShipDialog
+        open={shipOpen}
+        orderId={doc.id}
+        onClose={() => setShipOpen(false)}
+        onSaved={() => {
+          setShipOpen(false);
+          toast.success('Pedido enviado');
+          refresh();
+        }}
+      />
+
       <PaymentDialog
         open={payOpen}
         orderId={doc.id}
@@ -736,6 +757,86 @@ function PaymentDialog({
             </Button>
             <Button type="submit" variant="primary" loading={saving}>
               Registrar pago
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ShipDialog({
+  open,
+  orderId,
+  onClose,
+  onSaved,
+}: {
+  open: boolean;
+  orderId: string;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [carrier, setCarrier] = useState('');
+  const [tracking, setTracking] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    setError(null);
+    const res = await shipOrder(orderId, { carrier: carrier || null, tracking: tracking || null });
+    setSaving(false);
+    if (!res.ok) return setError(res.error ?? 'No se pudo marcar como enviado.');
+    onSaved();
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && !saving && onClose()}>
+      <DialogContent className="w-[min(94vw,28rem)]">
+        <form onSubmit={(e) => void submit(e)} className="grid gap-5 p-6">
+          <div className="grid gap-1">
+            <DialogTitle className="text-base font-semibold text-fg">
+              Marcar como enviado
+            </DialogTitle>
+            <DialogDescription className="text-sm text-muted">
+              Si el inventario automático está activo, las existencias apartadas salen del almacén.
+            </DialogDescription>
+          </div>
+          {error ? (
+            <p
+              role="alert"
+              className="rounded-control border border-danger/30 bg-danger/10 px-3.5 py-3 text-sm text-danger"
+            >
+              {error}
+            </p>
+          ) : null}
+          <Field id="s-carrier" label="Paquetería o transporte">
+            {(a) => (
+              <Input
+                {...a}
+                value={carrier}
+                onChange={(e) => setCarrier(e.target.value)}
+                autoComplete="off"
+              />
+            )}
+          </Field>
+          <Field id="s-tracking" label="Número de guía">
+            {(a) => (
+              <Input
+                {...a}
+                value={tracking}
+                onChange={(e) => setTracking(e.target.value)}
+                autoComplete="off"
+              />
+            )}
+          </Field>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="ghost" onClick={onClose} disabled={saving}>
+              Cancelar
+            </Button>
+            <Button type="submit" variant="primary" loading={saving}>
+              Marcar como enviado
             </Button>
           </div>
         </form>

@@ -23,7 +23,8 @@ function initial(def: EntityDef, row: Row | null, preset: Row | undefined): Valu
   const v: Values = {};
   for (const f of def.fields) {
     const raw = row ? row[f.name] : preset?.[f.name];
-    if (f.type === 'checkbox') v[f.name] = Boolean(raw);
+    if (f.type === 'checkbox')
+      v[f.name] = raw === undefined && !row ? Boolean(f.defaultChecked) : Boolean(raw);
     else if (f.type === 'datetime') v[f.name] = isoToLocal(raw as string | null);
     else if (raw !== null && raw !== undefined) v[f.name] = String(raw);
     else if (f.type === 'select') v[f.name] = f.options?.[0]?.value ?? '';

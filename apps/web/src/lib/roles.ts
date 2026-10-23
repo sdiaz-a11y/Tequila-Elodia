@@ -44,6 +44,14 @@ export function entityPermissions(
   user: Pick<SessionUser, 'roles'>,
   key: string,
 ): { read: boolean; write: boolean; remove: boolean } {
+  if (key === 'warehouses' || key === 'lots') {
+    const ok = canInventory(user);
+    return { read: canRead(user), write: ok, remove: canApprove(user) };
+  }
+  if (key === 'pipeline_stages') {
+    const ok = canAdmin(user);
+    return { read: canRead(user), write: ok, remove: ok };
+  }
   if (key === 'transactions') {
     const ok = canFinance(user);
     return { read: ok, write: ok, remove: ok };
@@ -64,3 +72,6 @@ export const canCompliance = (u: Pick<SessionUser, 'roles'>) => has(u, COMPLIANC
 
 const COLLECT = ['tech_superadmin', 'director_vp', 'ops_admin', 'finance', 'sales_manager'];
 export const canCollect = (u: Pick<SessionUser, 'roles'>) => has(u, COLLECT);
+
+const INVENTORY = ['tech_superadmin', 'director_vp', 'ops_admin', 'operations'];
+export const canInventory = (u: Pick<SessionUser, 'roles'>) => has(u, INVENTORY);

@@ -55,6 +55,8 @@ const RELATIONS: Record<
   projects: { table: 'projects', label: 'name', order: 'name' },
   products: { table: 'products', label: 'name', order: 'name' },
   campaigns: { table: 'campaigns', label: 'name', order: 'name' },
+  variants: { table: 'product_variants', label: 'sku', order: 'sku' },
+  warehouses: { table: 'warehouses', label: 'name', order: 'name', only: 'active' },
 };
 
 /** Choices for relation fields (company, owner, stage…). Capped: very large lists need a search box later. */

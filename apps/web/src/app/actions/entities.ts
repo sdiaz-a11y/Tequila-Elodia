@@ -42,6 +42,9 @@ const paths: Record<string, string[]> = {
   transactions: ['/finanzas'],
   quotes: ['/cotizaciones'],
   orders: ['/pedidos'],
+  warehouses: ['/almacenes', '/inventario'],
+  lots: ['/lotes', '/inventario'],
+  pipeline_stages: ['/configuracion', '/pipeline'],
 };
 
 export async function saveRow(key: string, id: string | null, input: unknown): Promise<SaveResult> {

@@ -28,7 +28,9 @@ export type RelationKey =
   | 'assets'
   | 'projects'
   | 'products'
-  | 'campaigns';
+  | 'campaigns'
+  | 'variants'
+  | 'warehouses';
 
 export interface Option {
   value: string;
@@ -46,6 +48,8 @@ export interface Field {
   /** Whole numbers only (e.g. millilitres). */
   integer?: boolean;
   max?: number;
+  /** Initial state of a checkbox when creating (e.g. active = true). */
+  defaultChecked?: boolean;
   /** Value used when a numeric field is left blank (for columns that cannot be null, like a budget). */
   blankAs?: number;
   /** Left out of the form when editing (identity of the row, e.g. the company of a distributor). */
@@ -97,7 +101,10 @@ export type EntityKey =
   | 'compliance_documents'
   | 'transactions'
   | 'quotes'
-  | 'orders';
+  | 'orders'
+  | 'warehouses'
+  | 'lots'
+  | 'pipeline_stages';
 
 const opts = (...pairs: [string, string][]): Option[] =>
   pairs.map(([value, label]) => ({ value, label }));
@@ -173,6 +180,146 @@ export const DOC_STATUS = opts(
 const TX_KINDS = opts(['income', 'Ingreso'], ['expense', 'Egreso']);
 
 export const ENTITIES: Record<EntityKey, EntityDef> = {
+  warehouses: {
+    key: 'warehouses',
+    table: 'warehouses',
+    singular: 'almacén',
+    plural: 'Almacenes',
+    isFeminine: false,
+    select: '*',
+    search: ['name', 'address'],
+    order: { column: 'name', ascending: true },
+    filters: [],
+    fields: [
+      { name: 'name', label: 'Nombre', type: 'text', required: true },
+      {
+        name: 'kind',
+        label: 'Tipo',
+        type: 'select',
+        required: true,
+        options: opts(
+          ['own', 'Propio'],
+          ['third_party', 'De terceros'],
+          ['distributor', 'De un distribuidor'],
+        ),
+      },
+      { name: 'address', label: 'Dirección', type: 'text' },
+      { name: 'active', label: 'Activo', type: 'checkbox', defaultChecked: true },
+      {
+        name: 'is_default',
+        label: 'Almacén predeterminado (se usa para reservar los pedidos)',
+        type: 'checkbox',
+      },
+      { name: 'notes', label: 'Notas', type: 'textarea' },
+    ],
+    columns: [
+      { path: 'name', label: 'Almacén' },
+      {
+        path: 'kind',
+        label: 'Tipo',
+        as: 'badge',
+        options: opts(
+          ['own', 'Propio'],
+          ['third_party', 'De terceros'],
+          ['distributor', 'De distribuidor'],
+        ),
+      },
+      { path: 'address', label: 'Dirección' },
+      { path: 'active', label: 'Activo', as: 'bool' },
+      { path: 'is_default', label: 'Predeterminado', as: 'bool' },
+    ],
+    empty: {
+      title: 'Aún no hay almacenes',
+      description: 'Registra dónde guardas el producto para poder llevar sus existencias.',
+    },
+  },
+  lots: {
+    key: 'lots',
+    table: 'inventory_lots',
+    singular: 'lote',
+    plural: 'Lotes',
+    isFeminine: false,
+    select: '*, variant:product_variants!variant_id(sku,presentation)',
+    search: ['lot_code'],
+    order: { column: 'created_at', ascending: false },
+    filters: [],
+    fields: [
+      {
+        name: 'variant_id',
+        label: 'Presentación',
+        type: 'relation',
+        relation: 'variants',
+        required: true,
+        lockOnEdit: true,
+      },
+      { name: 'lot_code', label: 'Código de lote', type: 'text', required: true },
+      { name: 'produced_on', label: 'Fecha de producción', type: 'date' },
+      { name: 'expires_on', label: 'Caducidad', type: 'date' },
+      { name: 'notes', label: 'Notas', type: 'textarea' },
+    ],
+    columns: [
+      { path: 'lot_code', label: 'Lote' },
+      { path: 'variant.sku', label: 'SKU' },
+      { path: 'produced_on', label: 'Producción', as: 'date' },
+      { path: 'expires_on', label: 'Caduca', as: 'expiry' },
+    ],
+    empty: {
+      title: 'Aún no hay lotes',
+      description:
+        'Registra los lotes de producción para poder rastrear cada entrada al inventario.',
+    },
+  },
+  pipeline_stages: {
+    key: 'pipeline_stages',
+    table: 'pipeline_stages',
+    singular: 'etapa',
+    plural: 'Etapas del pipeline',
+    isFeminine: true,
+    select: '*',
+    search: ['name'],
+    order: { column: 'position', ascending: true },
+    filters: [],
+    fields: [
+      { name: 'name', label: 'Nombre de la etapa', type: 'text', required: true },
+      {
+        name: 'position',
+        label: 'Orden (1 es la primera)',
+        type: 'number',
+        integer: true,
+        required: true,
+      },
+      {
+        name: 'probability',
+        label: 'Probabilidad de cierre (%)',
+        type: 'number',
+        integer: true,
+        max: 100,
+        blankAs: 0,
+      },
+      {
+        name: 'kind',
+        label: 'Tipo',
+        type: 'select',
+        required: true,
+        options: opts(['open', 'Abierta'], ['won', 'Ganada'], ['lost', 'Perdida']),
+      },
+    ],
+    columns: [
+      { path: 'position', label: 'Orden' },
+      { path: 'name', label: 'Etapa' },
+      { path: 'probability', label: 'Probabilidad (%)' },
+      {
+        path: 'kind',
+        label: 'Tipo',
+        as: 'badge',
+        options: opts(['open', 'Abierta'], ['won', 'Ganada'], ['lost', 'Perdida']),
+      },
+    ],
+    empty: {
+      title: 'Sin etapas',
+      description: 'Define las etapas por las que avanza una oportunidad.',
+    },
+  },
   quotes: {
     key: 'quotes',
     table: 'quotes',
@@ -461,6 +608,11 @@ export const ENTITIES: Record<EntityKey, EntityDef> = {
       { name: 'volume_ml', label: 'Volumen (ml)', type: 'number', integer: true },
       { name: 'abv', label: 'Graduación alcohólica (% Alc. Vol.)', type: 'number', max: 100 },
       { name: 'price', label: 'Precio de lista (MXN)', type: 'number' },
+      {
+        name: 'min_stock',
+        label: 'Existencia mínima (avisa cuando baje de aquí)',
+        type: 'number',
+      },
       { name: 'cost', label: 'Costo (MXN)', type: 'number' },
       {
         name: 'status',

@@ -51,6 +51,10 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
     tax_total: Number(o.tax_total),
     total: Number(o.total),
     paid_total: Number(o.paid_total),
+    carrier: (o.carrier as string | null) ?? null,
+    tracking: (o.tracking as string | null) ?? null,
+    shipped_at: (o.shipped_at as string | null) ?? null,
+    delivered_at: (o.delivered_at as string | null) ?? null,
   };
   return (
     <div className="animate-fade-up">
