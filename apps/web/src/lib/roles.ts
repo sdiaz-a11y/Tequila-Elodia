@@ -1,47 +1,68 @@
 import type { SessionUser } from '@elodia/shared';
 
-/** Mirrors the SQL functions can_read / can_write / can_manage / can_admin (supabase/migrations). The database is the real gate. */
-const READ = [
-  'tech_superadmin',
-  'director_vp',
-  'ops_admin',
-  'sales_manager',
-  'salesperson',
-  'marketing',
-  'operations',
+/** The signed-in user; capabilities come from the database (role_capabilities), so edits to a role apply at once. */
+export type RoleUser = Pick<SessionUser, 'roles'> & { capabilities?: readonly string[] };
+
+export const CAPABILITIES = [
+  'read',
+  'write',
+  'manage',
+  'admin',
+  'content',
+  'approve',
+  'ops',
+  'collect',
   'finance',
-  'collaborator',
-];
-const WRITE = ['tech_superadmin', 'director_vp', 'ops_admin', 'sales_manager', 'salesperson'];
-const MANAGE = ['tech_superadmin', 'director_vp', 'ops_admin', 'sales_manager'];
-const ADMIN = ['tech_superadmin', 'director_vp', 'ops_admin'];
+  'compliance',
+  'inventory',
+] as const;
+export type Capability = (typeof CAPABILITIES)[number];
 
-const has = (user: Pick<SessionUser, 'roles'>, list: string[]) =>
-  user.roles.some((r) => list.includes(r));
-export const canRead = (u: Pick<SessionUser, 'roles'>) => has(u, READ);
-export const canWrite = (u: Pick<SessionUser, 'roles'>) => has(u, WRITE);
-export const canManage = (u: Pick<SessionUser, 'roles'>) => has(u, MANAGE);
-export const canAdmin = (u: Pick<SessionUser, 'roles'>) => has(u, ADMIN);
+/** Initial matrix; mirrors the seed of role_capabilities (migration 0011). Used only when the database list is not loaded. */
+const SUPER = ['tech_superadmin', 'director_vp', 'ops_admin'];
+export const DEFAULT_CAPABILITY_ROLES: Record<Capability, string[]> = {
+  read: [
+    ...SUPER,
+    'sales_manager',
+    'salesperson',
+    'marketing',
+    'operations',
+    'finance',
+    'collaborator',
+  ],
+  write: [...SUPER, 'sales_manager', 'salesperson'],
+  manage: [...SUPER, 'sales_manager'],
+  admin: SUPER,
+  content: [...SUPER, 'sales_manager', 'marketing'],
+  approve: SUPER,
+  ops: [...SUPER, 'sales_manager', 'marketing', 'operations'],
+  collect: [...SUPER, 'finance', 'sales_manager'],
+  finance: [...SUPER, 'finance'],
+  compliance: [...SUPER, 'operations'],
+  inventory: [...SUPER, 'operations'],
+};
 
-/** Mirrors can_content / can_approve: who edits content, and who approves it or marks assets as official. */
-const CONTENT = ['tech_superadmin', 'director_vp', 'ops_admin', 'sales_manager', 'marketing'];
-const APPROVE = ['tech_superadmin', 'director_vp', 'ops_admin'];
-export const canContent = (u: Pick<SessionUser, 'roles'>) => has(u, CONTENT);
-export const canApprove = (u: Pick<SessionUser, 'roles'>) => has(u, APPROVE);
+const has = (u: RoleUser, cap: Capability) =>
+  u.roles.includes('tech_superadmin') ||
+  (u.capabilities
+    ? u.capabilities.includes(cap)
+    : u.roles.some((r) => DEFAULT_CAPABILITY_ROLES[cap].includes(r)));
 
-const OPS = [
-  'tech_superadmin',
-  'director_vp',
-  'ops_admin',
-  'sales_manager',
-  'marketing',
-  'operations',
-];
-export const canOps = (u: Pick<SessionUser, 'roles'>) => has(u, OPS);
+export const canRead = (u: RoleUser) => has(u, 'read');
+export const canWrite = (u: RoleUser) => has(u, 'write');
+export const canManage = (u: RoleUser) => has(u, 'manage');
+export const canAdmin = (u: RoleUser) => has(u, 'admin');
+export const canContent = (u: RoleUser) => has(u, 'content');
+export const canApprove = (u: RoleUser) => has(u, 'approve');
+export const canOps = (u: RoleUser) => has(u, 'ops');
+export const canFinance = (u: RoleUser) => has(u, 'finance');
+export const canCompliance = (u: RoleUser) => has(u, 'compliance');
+export const canCollect = (u: RoleUser) => has(u, 'collect');
+export const canInventory = (u: RoleUser) => has(u, 'inventory');
 
 /** Who may create/edit and who may delete, per entity. Mirrors the RLS policies in supabase/migrations. */
 export function entityPermissions(
-  user: Pick<SessionUser, 'roles'>,
+  user: RoleUser,
   key: string,
 ): { read: boolean; write: boolean; remove: boolean } {
   if (key === 'objectives')
@@ -68,14 +89,3 @@ export function entityPermissions(
   if (key === 'campaigns') return { read, write: canContent(user), remove: canApprove(user) };
   return { read, write: canWrite(user), remove: canManage(user) };
 }
-
-const FINANCE = ['tech_superadmin', 'director_vp', 'ops_admin', 'finance'];
-const COMPLIANCE = ['tech_superadmin', 'director_vp', 'ops_admin', 'operations'];
-export const canFinance = (u: Pick<SessionUser, 'roles'>) => has(u, FINANCE);
-export const canCompliance = (u: Pick<SessionUser, 'roles'>) => has(u, COMPLIANCE);
-
-const COLLECT = ['tech_superadmin', 'director_vp', 'ops_admin', 'finance', 'sales_manager'];
-export const canCollect = (u: Pick<SessionUser, 'roles'>) => has(u, COLLECT);
-
-const INVENTORY = ['tech_superadmin', 'director_vp', 'ops_admin', 'operations'];
-export const canInventory = (u: Pick<SessionUser, 'roles'>) => has(u, INVENTORY);

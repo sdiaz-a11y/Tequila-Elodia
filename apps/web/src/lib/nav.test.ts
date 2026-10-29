@@ -64,6 +64,7 @@ describe('navigation', () => {
         '/planeacion',
         '/redes',
         '/reportes',
+        '/roles',
         '/bi',
       ].sort(),
     );

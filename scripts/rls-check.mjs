@@ -336,6 +336,32 @@ try {
     t('export is in the audit log', (aud.data?.length ?? 0) >= 1);
     await admin.from('audit_log').delete().eq('table_name', 'export:rls-test').then(() => {}, () => {});
   }
+
+  // Roles editables: solo superadmin/dirección cambian permisos, y el cambio manda de inmediato.
+  {
+    const mkt = await asRole('marketing');
+    const mgr2 = await asRole('sales_manager');
+    const before = await mkt.from('content_items').insert({ title: 'rls-cap', channel: 'instagram', format: 'post' }).select('id').single();
+    t('marketing can create content by default', !before.error, before.error?.message);
+    const denied = await mgr2.rpc('set_role_capability', { p_role: 'marketing', p_cap: 'content', p_enabled: false });
+    t('sales manager cannot change permissions', !!denied.error);
+    const locked = await owner.rpc('set_role_capability', { p_role: 'director_vp', p_cap: 'read', p_enabled: false });
+    t('director role cannot be edited', !!locked.error);
+    const locked2 = await owner.rpc('set_role_capability', { p_role: 'tech_superadmin', p_cap: 'admin', p_enabled: false });
+    t('superadmin role cannot be edited', !!locked2.error);
+    const off = await owner.rpc('set_role_capability', { p_role: 'marketing', p_cap: 'content', p_enabled: false });
+    t('superadmin removes a permission', !off.error, off.error?.message);
+    const after = await mkt.from('content_items').insert({ title: 'rls-cap', channel: 'instagram', format: 'post' }).select('id').single();
+    t('removed permission takes effect at once', !!after.error);
+    const on = await owner.rpc('set_role_capability', { p_role: 'marketing', p_cap: 'content', p_enabled: true });
+    t('superadmin restores the permission', !on.error, on.error?.message);
+    const again = await mkt.from('content_items').insert({ title: 'rls-cap', channel: 'instagram', format: 'post' }).select('id').single();
+    t('restored permission works again', !again.error, again.error?.message);
+    const direct = await mgr2.from('role_capabilities').insert({ role: 'collaborator', capability: 'finance' });
+    t('permissions cannot be written directly', !!direct.error);
+    const aud = await admin.from('audit_log').select('id').eq('table_name', 'role_capabilities');
+    t('permission changes are audited', (aud.data?.length ?? 0) >= 2);
+  }
 } finally {
   // Cleanup in dependency order, even after an interrupted run (the ledger blocks deleting what it references).
   await admin.from('automation_settings').update({ enabled: false }).neq('key', '');
@@ -362,6 +388,7 @@ try {
   await admin.from('content_items').delete().like('title', 'rls-%');
   await admin.from('tasks').delete().eq('title', 'rls-test');
   await admin.from('objectives').delete().eq('title', 'rls-obj');
+  await admin.from('role_capabilities').upsert({ role: 'marketing', capability: 'content' });
   for (const id of made) await admin.auth.admin.deleteUser(id);
   console.log(out.join('\n'));
   console.log(failed ? `\n${failed} CHECK(S) FAILED` : '\nall checks passed');

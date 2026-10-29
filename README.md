@@ -24,6 +24,9 @@ Una sola aplicación Next.js (`apps/web`) con **Supabase** (inicio de sesión + 
 - **Reportes y BI**: descarga en CSV (con filtro de fechas; finanzas solo para su rol) y cada descarga queda en la auditoría; BI con pipeline, ventas, ingresos/gastos y contenido.
 - **Notificaciones**: la campana muestra tareas y actividades vencidas, documentos por vencer, stock bajo, aprobaciones y cotizaciones sin respuesta.
 
+- **Roles y permisos**: cada rol tiene casillas editables (solo superadministrador y dirección general; ellos mismos no se editan). La base de datos consulta esa tabla, así que el cambio aplica de inmediato y queda en la auditoría.
+- **Guía de uso** para la dirección: `docs/GUIA-VP.md`.
+
 La plataforma no incluye ni incluirá funciones de IA. Pendiente (aparece en el menú como "Próximamente"): integraciones.
 
 ## Cómo funciona la seguridad
