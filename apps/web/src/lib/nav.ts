@@ -1,6 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
 import {
-  Bot,
   Boxes,
   CalendarDays,
   ClipboardCheck,
@@ -25,7 +24,6 @@ import {
   Tags,
   Share2,
   ShoppingCart,
-  Sparkles,
   Target,
   Truck,
   UsersRound,
@@ -153,14 +151,6 @@ export const NAV: NavGroup[] = [
         resource: 'brand',
       },
       {
-        label: 'Content Studio IA',
-        href: '/content-studio',
-        icon: Sparkles,
-        status: 'soon',
-        plan: 'Fase 2',
-        resource: 'content',
-      },
-      {
         label: 'Calendario editorial',
         href: '/calendario',
         icon: CalendarDays,
@@ -278,16 +268,8 @@ export const NAV: NavGroup[] = [
     ],
   },
   {
-    label: 'Inteligencia',
+    label: 'Automatización',
     items: [
-      {
-        label: 'Asistente ejecutivo',
-        href: '/asistente',
-        icon: Bot,
-        status: 'soon',
-        plan: 'Fase 3',
-        resource: 'assistant',
-      },
       {
         label: 'Automatizaciones',
         href: '/automatizaciones',

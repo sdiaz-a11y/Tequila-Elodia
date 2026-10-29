@@ -18,7 +18,7 @@ export default async function AutomationsPage() {
   return (
     <div className="animate-fade-up grid grid-cols-[minmax(0,1fr)] gap-6">
       <header className="grid gap-2">
-        <p className="text-sm text-muted">Inteligencia</p>
+        <p className="text-sm text-muted">Automatización</p>
         <h1 className="font-display text-4xl font-semibold tracking-tight text-fg">
           Automatizaciones
         </h1>

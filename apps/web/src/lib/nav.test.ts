@@ -18,7 +18,7 @@ describe('navigation', () => {
       'Marketing',
       'Operaciones',
       'Administración',
-      'Inteligencia',
+      'Automatización',
       'Sistema',
     ]);
   });

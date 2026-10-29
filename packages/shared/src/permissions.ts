@@ -31,7 +31,6 @@ export const RESOURCES = [
   'tasks',
   'compliance',
   'reports',
-  'assistant',
   'automations',
   'users',
   'roles',

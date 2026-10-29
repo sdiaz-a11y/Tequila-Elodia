@@ -48,7 +48,6 @@ const RULES: Record<RoleKey, readonly Rule[]> = {
         'budgets',
         'compliance',
         'reports',
-        'assistant',
       ],
       ['create', 'update', 'approve'],
       'all',

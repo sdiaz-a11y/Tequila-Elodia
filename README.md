@@ -24,7 +24,7 @@ Una sola aplicación Next.js (`apps/web`) con **Supabase** (inicio de sesión + 
 - **Reportes y BI**: descarga en CSV (con filtro de fechas; finanzas solo para su rol) y cada descarga queda en la auditoría; BI con pipeline, ventas, ingresos/gastos y contenido.
 - **Notificaciones**: la campana muestra tareas y actividades vencidas, documentos por vencer, stock bajo, aprobaciones y cotizaciones sin respuesta.
 
-Pendiente (aparece en el menú como "Próximamente"): Content Studio con IA, asistente IA e integraciones.
+La plataforma no incluye ni incluirá funciones de IA. Pendiente (aparece en el menú como "Próximamente"): integraciones.
 
 ## Cómo funciona la seguridad
 
