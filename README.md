@@ -19,7 +19,12 @@ Una sola aplicación Next.js (`apps/web`) con **Supabase** (inicio de sesión + 
 - **Auditoría**: cada alta, cambio y borrado queda registrado por la base de datos y no se puede editar.
 - Marca y diseño: `docs/brand-reference.json`, `assets/brand/official/`.
 
-Pendiente (aparece en el menú como "Próximamente"): Content Studio con IA, redes sociales, planeación estratégica, BI, asistente IA, automatizaciones e integraciones.
+- **Planeación estratégica**: metas con cifra objetivo y fecha; cada avance se registra en un historial que no se edita y al llegar a la meta se marca como lograda. Gerencia define metas; operación registra avances.
+- **Redes sociales**: publicaciones aprobadas en el calendario, con enlace, alcance e interacciones capturados a mano.
+- **Reportes y BI**: descarga en CSV (con filtro de fechas; finanzas solo para su rol) y cada descarga queda en la auditoría; BI con pipeline, ventas, ingresos/gastos y contenido.
+- **Notificaciones**: la campana muestra tareas y actividades vencidas, documentos por vencer, stock bajo, aprobaciones y cotizaciones sin respuesta.
+
+Pendiente (aparece en el menú como "Próximamente"): Content Studio con IA, asistente IA e integraciones.
 
 ## Cómo funciona la seguridad
 

@@ -298,6 +298,44 @@ try {
   await admin.from('product_variants').delete().eq('id', variant.id);
   await admin.from('products').delete().eq('id', prod.id);
   await admin.from('accounts').delete().eq('id', acc.id);
+
+  // Planeación: gerencia define metas; operación registra avances; el historial es inmutable.
+  {
+    const mgr = await asRole('sales_manager');
+    const sp = await asRole('salesperson');
+    const col = await asRole('collaborator');
+    const opr = await asRole('operations');
+    const mk = await sp.from('objectives').insert({ title: 'rls-obj', target: 10 });
+    t('salesperson cannot create objectives', !!mk.error);
+    const ob = await mgr.from('objectives').insert({ title: 'rls-obj', target: 10, unit: 'u' }).select().single();
+    t('manager creates objective', !ob.error, ob.error?.message);
+    const id = ob.data?.id;
+    const up = await opr.from('objective_updates').insert({ objective_id: id, value: 4 });
+    t('operations logs progress', !up.error, up.error?.message);
+    const cur = await admin.from('objectives').select('current_value,status').eq('id', id).single();
+    t('progress moves current value', Number(cur.data?.current_value) === 4 && cur.data?.status === 'active');
+    await opr.from('objective_updates').insert({ objective_id: id, value: 10 });
+    const done = await admin.from('objectives').select('status').eq('id', id).single();
+    t('reaching target marks objective achieved', done.data?.status === 'achieved');
+    const cu = await col.from('objective_updates').insert({ objective_id: id, value: 1 });
+    t('collaborator cannot log progress', !!cu.error);
+    const su = await sp.from('objective_updates').insert({ objective_id: id, value: 1 });
+    t('salesperson cannot log progress', !!su.error);
+    const forge = await sp.from('objectives').update({ current_value: 999 }).eq('id', id).select();
+    t('salesperson cannot edit objective directly', !forge.data?.length);
+    const ed = await sp.from('objective_updates').update({ value: 0 }).eq('objective_id', id).select();
+    t('progress history cannot be edited', !ed.data?.length);
+    const rm = await mgr.from('objectives').delete().eq('id', id).select();
+    t('manager cannot delete objectives', !rm.data?.length);
+    // Exportaciones: quedan en la auditoría y exigen sesión.
+    const ex = await sp.rpc('log_export', { p_kind: 'rls-test', p_rows: 1, p_filters: {} });
+    t('signed-in user can log an export', !ex.error, ex.error?.message);
+    const exAnon = await createClient(url, pub, { auth: { persistSession: false } }).rpc('log_export', { p_kind: 'rls-test', p_rows: 1, p_filters: {} });
+    t('anonymous cannot log an export', !!exAnon.error);
+    const aud = await admin.from('audit_log').select('id').eq('action', 'export').eq('table_name', 'export:rls-test');
+    t('export is in the audit log', (aud.data?.length ?? 0) >= 1);
+    await admin.from('audit_log').delete().eq('table_name', 'export:rls-test').then(() => {}, () => {});
+  }
 } finally {
   // Cleanup in dependency order, even after an interrupted run (the ledger blocks deleting what it references).
   await admin.from('automation_settings').update({ enabled: false }).neq('key', '');
@@ -323,6 +361,7 @@ try {
   await admin.from('compliance_documents').delete().like('title', 'rls-%');
   await admin.from('content_items').delete().like('title', 'rls-%');
   await admin.from('tasks').delete().eq('title', 'rls-test');
+  await admin.from('objectives').delete().eq('title', 'rls-obj');
   for (const id of made) await admin.auth.admin.deleteUser(id);
   console.log(out.join('\n'));
   console.log(failed ? `\n${failed} CHECK(S) FAILED` : '\nall checks passed');
