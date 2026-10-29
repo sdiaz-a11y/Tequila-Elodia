@@ -212,6 +212,49 @@ export function EntityManager({
     router.refresh();
   }
 
+  const actionsMenu = (row: Row) =>
+    canWrite || canDelete || (def.key === 'objectives' && canLog) ? (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon" aria-label="Acciones">
+            <MoreHorizontal aria-hidden />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent className="w-52">
+          {def.key === 'compliance_documents' && canWrite && row.status === 'draft' ? (
+            <DropdownMenuItem onSelect={() => void documentAction(row, 'submit')}>
+              <Send aria-hidden />
+              Enviar a revisión
+            </DropdownMenuItem>
+          ) : null}
+          {def.key === 'compliance_documents' && canApprove && row.status === 'in_review' ? (
+            <DropdownMenuItem onSelect={() => void documentAction(row, 'approve')}>
+              <Check aria-hidden />
+              Aprobar documento
+            </DropdownMenuItem>
+          ) : null}
+          {def.key === 'objectives' && canLog ? (
+            <DropdownMenuItem onSelect={() => setLogging(row)}>
+              <TrendingUp aria-hidden />
+              Registrar avance
+            </DropdownMenuItem>
+          ) : null}
+          {canWrite ? (
+            <DropdownMenuItem onSelect={() => setEditing(row)}>
+              <Pencil aria-hidden />
+              Editar
+            </DropdownMenuItem>
+          ) : null}
+          {canDelete ? (
+            <DropdownMenuItem danger onSelect={() => setRemoving(row)}>
+              <Trash2 aria-hidden />
+              Eliminar
+            </DropdownMenuItem>
+          ) : null}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    ) : null;
+
   return (
     <div className="grid grid-cols-[minmax(0,1fr)] gap-4">
       <div className="flex flex-wrap items-center gap-3">
@@ -275,109 +318,107 @@ export function EntityManager({
             }
           />
         ) : (
-          <TableWrap>
-            <Table aria-label={def.plural}>
-              <THead>
-                <tr>
-                  {isActivities ? (
-                    <TH className="w-12">
-                      <span className="sr-only">Hecha</span>
-                    </TH>
-                  ) : null}
-                  {def.columns.map((c) => (
-                    <TH key={c.path}>{c.label}</TH>
-                  ))}
-                  <TH className="w-12">
-                    <span className="sr-only">Acciones</span>
-                  </TH>
-                </tr>
-              </THead>
-              <tbody>
-                {rows.map((row) => (
-                  <TR
-                    key={row.id as string}
-                    className={isActivities && row.done_at ? 'opacity-55' : ''}
-                  >
+          <>
+            <ul className="divide-y divide-line md:hidden">
+              {rows.map((row) => (
+                <li
+                  key={row.id as string}
+                  className={`grid gap-2 px-4 py-3.5 ${isActivities && row.done_at ? 'opacity-55' : ''}`}
+                >
+                  <div className="flex items-start gap-3">
                     {isActivities ? (
-                      <TD>
-                        <input
-                          type="checkbox"
-                          checked={Boolean(row.done_at)}
-                          disabled={!canWrite}
-                          onChange={() => void toggleDone(row)}
-                          aria-label={`Marcar como ${row.done_at ? 'pendiente' : 'hecha'}: ${row.subject as string}`}
-                          className="size-4 accent-[var(--gold-primary)]"
-                        />
-                      </TD>
+                      <input
+                        type="checkbox"
+                        checked={Boolean(row.done_at)}
+                        disabled={!canWrite}
+                        onChange={() => void toggleDone(row)}
+                        aria-label={`Marcar como ${row.done_at ? 'pendiente' : 'hecha'}: ${row.subject as string}`}
+                        className="mt-1 size-4 shrink-0 accent-[var(--gold-primary)]"
+                      />
                     ) : null}
-                    {def.columns.map((c, i) => (
-                      <TD key={c.path} className={i === 0 ? 'font-medium' : 'text-muted'}>
-                        {i === 0 && def.detail ? (
-                          <Link
-                            href={`${def.detail}/${row.id as string}`}
-                            className="text-gold underline-offset-4 hover:underline"
-                          >
-                            <Cell col={c} row={row} />
-                          </Link>
-                        ) : (
+                    <div className="min-w-0 flex-1 font-medium text-fg [overflow-wrap:anywhere]">
+                      {def.detail ? (
+                        <Link
+                          href={`${def.detail}/${row.id as string}`}
+                          className="text-gold underline-offset-4 hover:underline"
+                        >
+                          <Cell col={def.columns[0]!} row={row} />
+                        </Link>
+                      ) : (
+                        <Cell col={def.columns[0]!} row={row} />
+                      )}
+                    </div>
+                    {actionsMenu(row)}
+                  </div>
+                  <dl className="grid gap-1.5 text-sm">
+                    {def.columns.slice(1).map((c) => (
+                      <div key={c.path} className="flex items-baseline justify-between gap-4">
+                        <dt className="shrink-0 text-xs text-faint">{c.label}</dt>
+                        <dd className="min-w-0 text-right text-muted [overflow-wrap:anywhere]">
                           <Cell col={c} row={row} />
-                        )}
-                      </TD>
+                        </dd>
+                      </div>
                     ))}
-                    <TD>
-                      {canWrite || canDelete || (def.key === 'objectives' && canLog) ? (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" aria-label="Acciones">
-                              <MoreHorizontal aria-hidden />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent className="w-52">
-                            {def.key === 'compliance_documents' &&
-                            canWrite &&
-                            row.status === 'draft' ? (
-                              <DropdownMenuItem onSelect={() => void documentAction(row, 'submit')}>
-                                <Send aria-hidden />
-                                Enviar a revisión
-                              </DropdownMenuItem>
-                            ) : null}
-                            {def.key === 'compliance_documents' &&
-                            canApprove &&
-                            row.status === 'in_review' ? (
-                              <DropdownMenuItem
-                                onSelect={() => void documentAction(row, 'approve')}
-                              >
-                                <Check aria-hidden />
-                                Aprobar documento
-                              </DropdownMenuItem>
-                            ) : null}
-                            {def.key === 'objectives' && canLog ? (
-                              <DropdownMenuItem onSelect={() => setLogging(row)}>
-                                <TrendingUp aria-hidden />
-                                Registrar avance
-                              </DropdownMenuItem>
-                            ) : null}
-                            {canWrite ? (
-                              <DropdownMenuItem onSelect={() => setEditing(row)}>
-                                <Pencil aria-hidden />
-                                Editar
-                              </DropdownMenuItem>
-                            ) : null}
-                            {canDelete ? (
-                              <DropdownMenuItem danger onSelect={() => setRemoving(row)}>
-                                <Trash2 aria-hidden />
-                                Eliminar
-                              </DropdownMenuItem>
-                            ) : null}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                  </dl>
+                </li>
+              ))}
+            </ul>
+            <TableWrap className="hidden md:block">
+              <Table aria-label={def.plural}>
+                <THead>
+                  <tr>
+                    {isActivities ? (
+                      <TH className="w-12">
+                        <span className="sr-only">Hecha</span>
+                      </TH>
+                    ) : null}
+                    {def.columns.map((c) => (
+                      <TH key={c.path}>{c.label}</TH>
+                    ))}
+                    <TH className="w-12">
+                      <span className="sr-only">Acciones</span>
+                    </TH>
+                  </tr>
+                </THead>
+                <tbody>
+                  {rows.map((row) => (
+                    <TR
+                      key={row.id as string}
+                      className={isActivities && row.done_at ? 'opacity-55' : ''}
+                    >
+                      {isActivities ? (
+                        <TD>
+                          <input
+                            type="checkbox"
+                            checked={Boolean(row.done_at)}
+                            disabled={!canWrite}
+                            onChange={() => void toggleDone(row)}
+                            aria-label={`Marcar como ${row.done_at ? 'pendiente' : 'hecha'}: ${row.subject as string}`}
+                            className="size-4 accent-[var(--gold-primary)]"
+                          />
+                        </TD>
                       ) : null}
-                    </TD>
-                  </TR>
-                ))}
-              </tbody>
-            </Table>
-          </TableWrap>
+                      {def.columns.map((c, i) => (
+                        <TD key={c.path} className={i === 0 ? 'font-medium' : 'text-muted'}>
+                          {i === 0 && def.detail ? (
+                            <Link
+                              href={`${def.detail}/${row.id as string}`}
+                              className="text-gold underline-offset-4 hover:underline"
+                            >
+                              <Cell col={c} row={row} />
+                            </Link>
+                          ) : (
+                            <Cell col={c} row={row} />
+                          )}
+                        </TD>
+                      ))}
+                      <TD>{actionsMenu(row)}</TD>
+                    </TR>
+                  ))}
+                </tbody>
+              </Table>
+            </TableWrap>
+          </>
         )}
 
         {total > 0 ? (
