@@ -27,7 +27,9 @@ Una sola aplicación Next.js (`apps/web`) con **Supabase** (inicio de sesión + 
 - **Roles y permisos**: cada rol tiene casillas editables (solo superadministrador y dirección general; ellos mismos no se editan). La base de datos consulta esa tabla, así que el cambio aplica de inmediato y queda en la auditoría.
 - **Guía de uso** para la dirección: `docs/GUIA-VP.md`.
 
-La plataforma no incluye ni incluirá funciones de IA. Pendiente (aparece en el menú como "Próximamente"): integraciones.
+- **Integraciones** (sin costo): botón «Escribir por WhatsApp» en empresas y contactos con teléfono; rastreo de guías DHL, FedEx y UPS en los pedidos; enlace privado para suscribir el calendario (actividades, tareas y publicaciones) en Google Calendar o iPhone; y envío de cotizaciones por correo con Resend, que queda apagado hasta definir `RESEND_API_KEY` y `EMAIL_FROM` (ver `.env.example`).
+
+La plataforma no incluye ni incluirá funciones de IA. Fuera de alcance por ahora: facturación electrónica (CFDI), publicación directa en redes y cobro en línea.
 
 ## Cómo funciona la seguridad
 

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   Check,
+  MessageCircle,
   TrendingUp,
   Send,
   ChevronLeft,
@@ -47,6 +48,7 @@ import {
   formatMoney2,
   isOverdue,
 } from '@/lib/format';
+import { whatsappUrl } from '@/lib/contact-links';
 import { EntityFormDialog } from './entity-form-dialog';
 import { ProgressDialog } from './progress-dialog';
 
@@ -212,8 +214,19 @@ export function EntityManager({
     router.refresh();
   }
 
+  const waLink = (row: Row) =>
+    typeof row.phone === 'string'
+      ? whatsappUrl(
+          row.phone,
+          `Hola ${String(row.name ?? '').trim()}, te escribimos de ELODIA.`.replace(
+            'Hola ,',
+            'Hola,',
+          ),
+        )
+      : null;
+
   const actionsMenu = (row: Row) =>
-    canWrite || canDelete || (def.key === 'objectives' && canLog) ? (
+    canWrite || canDelete || (def.key === 'objectives' && canLog) || waLink(row) ? (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="icon" aria-label="Acciones">
@@ -231,6 +244,14 @@ export function EntityManager({
             <DropdownMenuItem onSelect={() => void documentAction(row, 'approve')}>
               <Check aria-hidden />
               Aprobar documento
+            </DropdownMenuItem>
+          ) : null}
+          {waLink(row) ? (
+            <DropdownMenuItem asChild>
+              <a href={waLink(row)!} target="_blank" rel="noopener noreferrer">
+                <MessageCircle aria-hidden />
+                Escribir por WhatsApp
+              </a>
             </DropdownMenuItem>
           ) : null}
           {def.key === 'objectives' && canLog ? (

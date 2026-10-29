@@ -3,6 +3,9 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { explainDbError } from '@/lib/db-errors';
+import { emailConfigured, sendEmail } from '@/lib/email';
+import { quoteEmailHtml } from '@/lib/quote-email';
+import { canWrite } from '@/lib/roles';
 import { getSessionUser } from '@/lib/session';
 import { createSupabase } from '@/lib/supabase/server';
 
@@ -214,5 +217,96 @@ export async function shipOrder(id: string, input: unknown): Promise<SalesResult
   revalidatePath(`/pedidos/${id}`);
   revalidatePath('/pedidos');
   revalidatePath('/inventario');
+  return { ok: true };
+}
+
+const emailSchema = z.object({
+  to: z.email('Escribe un correo válido').max(200),
+  message: z.string().trim().max(1000).optional(),
+});
+
+/** Emails the quote to the customer and leaves a record in the company's activity. Needs the email provider set up. */
+export async function sendQuoteEmail(id: string, input: unknown): Promise<SalesResult> {
+  const user = await getSessionUser();
+  if (!user) return { ok: false, error: 'Tu sesión expiró. Inicia sesión de nuevo.' };
+  if (!canWrite(user)) return { ok: false, error: 'No tienes permiso para enviar cotizaciones.' };
+  if (!emailConfigured())
+    return { ok: false, error: 'El envío de correo aún no está configurado.' };
+  const parsed = emailSchema.safeParse(input);
+  if (!z.uuid().safeParse(id).success || !parsed.success)
+    return {
+      ok: false,
+      error: parsed.success ? 'Solicitud inválida.' : parsed.error.issues[0]!.message,
+    };
+
+  const supabase = await createSupabase();
+  const [quote, items] = await Promise.all([
+    supabase
+      .from('quotes')
+      .select(
+        'number,status,valid_until,currency,subtotal,discount_total,tax_total,total,notes,account_id,account:accounts!account_id(name)',
+      )
+      .eq('id', id)
+      .maybeSingle(),
+    supabase
+      .from('quote_items')
+      .select('description,quantity,unit_price,discount_pct,line_total')
+      .eq('quote_id', id)
+      .order('created_at'),
+  ]);
+  const q = quote.data as unknown as {
+    number: string;
+    status: string;
+    valid_until: string | null;
+    currency: string;
+    subtotal: number;
+    discount_total: number;
+    tax_total: number;
+    total: number;
+    notes: string | null;
+    account_id: string;
+    account: { name: string } | null;
+  } | null;
+  if (!q) return { ok: false, error: 'No se encontró la cotización.' };
+  if (q.status === 'rejected')
+    return { ok: false, error: 'Esta cotización fue rechazada. Reábrela antes de enviarla.' };
+  if (!items.data?.length)
+    return { ok: false, error: 'Agrega al menos un concepto antes de enviarla.' };
+
+  const sent = await sendEmail({
+    to: parsed.data.to,
+    subject: `Cotización ${q.number} · ELODIA`,
+    replyTo: user.email,
+    html: quoteEmailHtml(
+      {
+        number: q.number,
+        accountName: q.account?.name ?? '',
+        validUntil: q.valid_until,
+        currency: q.currency,
+        subtotal: Number(q.subtotal),
+        discount_total: Number(q.discount_total),
+        tax_total: Number(q.tax_total),
+        total: Number(q.total),
+        notes: q.notes,
+        lines: items.data.map((l) => ({
+          description: l.description as string,
+          quantity: Number(l.quantity),
+          unit_price: Number(l.unit_price),
+          discount_pct: Number(l.discount_pct),
+          line_total: Number(l.line_total),
+        })),
+      },
+      parsed.data.message ?? '',
+    ),
+  });
+  if (!sent.ok) return { ok: false, error: sent.error };
+
+  await supabase.from('activities').insert({
+    kind: 'email',
+    subject: `Cotización ${q.number} enviada por correo a ${parsed.data.to}`,
+    account_id: q.account_id,
+    done_at: new Date().toISOString(),
+  });
+  revalidatePath('/actividades');
   return { ok: true };
 }

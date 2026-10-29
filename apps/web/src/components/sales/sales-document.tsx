@@ -1,9 +1,12 @@
 'use client';
 
+import { trackingUrl } from '@/lib/tracking';
+import { EmailDialog } from './email-dialog';
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
+  Mail,
   ArrowLeft,
   Check,
   PackageCheck,
@@ -92,6 +95,8 @@ export function SalesDocument({
   canWrite,
   canManage,
   canCollect,
+  emailEnabled = false,
+  defaultEmail = '',
 }: {
   kind: 'quote' | 'order';
   doc: DocData;
@@ -104,6 +109,9 @@ export function SalesDocument({
   canWrite: boolean;
   canManage: boolean;
   canCollect: boolean;
+  /** The email provider is set up (RESEND_API_KEY). */
+  emailEnabled?: boolean;
+  defaultEmail?: string;
 }) {
   const router = useRouter();
   const isQuote = kind === 'quote';
@@ -120,6 +128,7 @@ export function SalesDocument({
   const [removingPay, setRemovingPay] = useState<PaymentRow | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [shipOpen, setShipOpen] = useState(false);
+  const [emailOpen, setEmailOpen] = useState(false);
 
   const refresh = () => router.refresh();
   const balance = isQuote ? 0 : Math.round((doc.total - (doc.paid_total ?? 0)) * 100) / 100;
@@ -194,7 +203,21 @@ export function SalesDocument({
         {!isQuote && (doc.carrier || doc.tracking || doc.shipped_at) ? (
           <p className="tabular text-sm text-muted">
             Envío{doc.carrier ? ` con ${doc.carrier}` : ''}
-            {doc.tracking ? ` · guía ${doc.tracking}` : ''}
+            {doc.tracking ? ' · guía ' : ''}
+            {doc.tracking ? (
+              trackingUrl(doc.carrier, doc.tracking) ? (
+                <a
+                  href={trackingUrl(doc.carrier, doc.tracking)!}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-gold underline-offset-4 hover:underline"
+                >
+                  {doc.tracking} (rastrear)
+                </a>
+              ) : (
+                doc.tracking
+              )
+            ) : null}
             {doc.shipped_at ? ` · enviado el ${formatDay(doc.shipped_at)}` : ''}
             {doc.delivered_at ? ` · entregado el ${formatDay(doc.delivered_at)}` : ''}
           </p>
@@ -203,6 +226,12 @@ export function SalesDocument({
 
       {canWrite ? (
         <div data-no-print className="flex flex-wrap gap-2">
+          {isQuote && emailEnabled && doc.status !== 'rejected' && lines.length ? (
+            <Button variant="secondary" onClick={() => setEmailOpen(true)}>
+              <Mail aria-hidden />
+              Enviar por correo
+            </Button>
+          ) : null}
           {isQuote && doc.status === 'draft' ? (
             <Button
               variant="primary"
@@ -586,6 +615,26 @@ export function SalesDocument({
           save={(id, values) => saveRow(isQuote ? 'quotes' : 'orders', id, values)}
         />
       ) : null}
+
+      <EmailDialog
+        key={String(emailOpen)}
+
+        open={emailOpen}
+
+        quoteId={doc.id}
+
+        number={doc.number}
+
+        defaultTo={defaultEmail}
+
+        onClose={() => setEmailOpen(false)}
+
+        onSent={() => {
+          setEmailOpen(false);
+
+          refresh();
+        }}
+      />
 
       <ShipDialog
         open={shipOpen}

@@ -45,6 +45,11 @@ La **campana** avisa de lo que necesita atención: tareas y actividades vencidas
 **Metas**
 - En **Planeación**, define una meta con cifra y fecha. Con *Registrar avance* anota el total acumulado; queda un historial y, al llegar a la meta, se marca como lograda.
 
+**Comunicarte**
+- En Empresas y Contactos, el menú de cada fila con teléfono trae **Escribir por WhatsApp**: abre el chat con un mensaje inicial y tú lo envías.
+- En **Integraciones** creas tu enlace privado para ver actividades, tareas y publicaciones en el calendario de tu celular.
+- En un pedido enviado, la guía de DHL, FedEx o UPS abre el rastreo.
+
 **Reportes**
 - En **Reportes** descargas la información en CSV (Excel), con rango de fechas. Cada descarga queda en la auditoría.
 

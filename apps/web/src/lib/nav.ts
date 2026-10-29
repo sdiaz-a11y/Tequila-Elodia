@@ -308,9 +308,8 @@ export const NAV: NavGroup[] = [
         label: 'Integraciones',
         href: '/integraciones',
         icon: Plug,
-        status: 'soon',
-        plan: 'Fase 3',
-        resource: 'settings',
+        status: 'live',
+        resource: 'tasks',
       },
       {
         label: 'Auditoría',

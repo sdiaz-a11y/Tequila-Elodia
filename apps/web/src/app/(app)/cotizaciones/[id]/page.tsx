@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { AccessDenied } from '@/components/ui/access-denied';
 import { SalesDocument, type DocData } from '@/components/sales/sales-document';
+import { emailConfigured } from '@/lib/email';
 import { ENTITIES } from '@/lib/entities';
 import { loadRelations, relationKeysOf } from '@/lib/entity-data';
 import { canCollect, canManage, canRead, canWrite } from '@/lib/roles';
@@ -32,6 +33,24 @@ export default async function QuotePage({ params }: { params: Promise<{ id: stri
   ]);
   if (!quote.data) notFound();
   const q = quote.data as Record<string, unknown>;
+  const accountId = (q.account as { id: string } | null)?.id;
+  let defaultEmail = '';
+  if (accountId && emailConfigured()) {
+    const { data: contacts } = await supabase
+      .from('contacts')
+      .select('email,is_primary')
+      .eq('account_id', accountId)
+      .not('email', 'is', null)
+      .order('is_primary', { ascending: false })
+      .limit(1);
+    const { data: acc } = await supabase
+      .from('accounts')
+      .select('email')
+      .eq('id', accountId)
+      .maybeSingle();
+    defaultEmail =
+      (contacts?.[0]?.email as string | undefined) ?? (acc?.email as string | undefined) ?? '';
+  }
   const doc: DocData = {
     id,
     number: q.number as string,
@@ -57,6 +76,8 @@ export default async function QuotePage({ params }: { params: Promise<{ id: stri
         canWrite={canWrite(user)}
         canManage={canManage(user)}
         canCollect={canCollect(user)}
+        emailEnabled={emailConfigured()}
+        defaultEmail={defaultEmail}
       />
     </div>
   );

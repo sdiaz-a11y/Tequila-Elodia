@@ -362,6 +362,23 @@ try {
     const aud = await admin.from('audit_log').select('id').eq('table_name', 'role_capabilities');
     t('permission changes are audited', (aud.data?.length ?? 0) >= 2);
   }
+
+  // Enlace de calendario: cada persona solo ve y maneja el suyo.
+  {
+    const a = await asRole('collaborator');
+    const b = await asRole('marketing');
+    const { data: me } = await a.auth.getUser();
+    const mk = await a.from('calendar_tokens').insert({ user_id: me.user.id, token: 'x'.repeat(43) });
+    t('person creates own calendar token', !mk.error, mk.error?.message);
+    const peek = await b.from('calendar_tokens').select('token');
+    t('another person cannot read the token', !(peek.data ?? []).some((r) => r.token === 'x'.repeat(43)));
+    const steal = await b.from('calendar_tokens').insert({ user_id: me.user.id, token: 'y'.repeat(43) });
+    t('cannot create a token for someone else', !!steal.error);
+    const weak = await a.from('calendar_tokens').update({ token: 'short' }).eq('user_id', me.user.id);
+    t('short tokens are rejected', !!weak.error);
+    const anonTok = await createClient(url, pub, { auth: { persistSession: false } }).from('calendar_tokens').select('token');
+    t('anonymous cannot read tokens', !anonTok.data?.length);
+  }
 } finally {
   // Cleanup in dependency order, even after an interrupted run (the ledger blocks deleting what it references).
   await admin.from('automation_settings').update({ enabled: false }).neq('key', '');
