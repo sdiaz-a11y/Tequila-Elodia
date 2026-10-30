@@ -1,6 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 import {
   Boxes,
+  Box,
   CalendarDays,
   ClipboardCheck,
   Palette,
@@ -148,6 +149,13 @@ export const NAV: NavGroup[] = [
         label: 'Brand Kit',
         href: '/brand-kit',
         icon: Palette,
+        status: 'live',
+        resource: 'brand',
+      },
+      {
+        label: 'Botella 3D',
+        href: '/botella',
+        icon: Box,
         status: 'live',
         resource: 'brand',
       },
