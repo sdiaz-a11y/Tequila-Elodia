@@ -5,3 +5,6 @@ allowBuilds:
   esbuild: true
   "@scarf/scarf": false
   unrs-resolver: false
+minimumReleaseAgeExclude:
+  - three@0.187.0
+  - "@types/three@0.187.0"

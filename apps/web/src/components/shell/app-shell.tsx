@@ -14,6 +14,7 @@ import { findNavItem } from '@/lib/nav';
 import { useSession } from '@/lib/session-client';
 import { Breadcrumbs } from './breadcrumbs';
 import { CommandMenu } from './command-menu';
+import { BottleBadge } from '@/components/brand/bottle-badge';
 import { Notifications } from './notifications';
 import { PeriodSelect } from './period-select';
 import { Sidebar, SidebarNav } from './sidebar';
@@ -153,6 +154,7 @@ export function AppShell({
                 <PeriodSelect />
               </Suspense>
             ) : null}
+            <BottleBadge className="h-[3.25rem] w-10 sm:w-11" />
             <div className="hidden sm:block">
               <Notifications />
             </div>

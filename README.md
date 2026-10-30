@@ -29,6 +29,8 @@ Una sola aplicación Next.js (`apps/web`) con **Supabase** (inicio de sesión + 
 
 - **Integraciones** (sin costo): botón «Escribir por WhatsApp» en empresas y contactos con teléfono; rastreo de guías DHL, FedEx y UPS en los pedidos; enlace privado para suscribir el calendario (actividades, tareas y publicaciones) en Google Calendar o iPhone; y envío de cotizaciones por correo con Resend, que queda apagado hasta definir `RESEND_API_KEY` y `EMAIL_FROM` (ver `.env.example`).
 
+- **Botella 3D**: modelo de la botella (GLB de ~0.9 MB) que gira en la barra superior, con fondo transparente, giro automático y arrastre manual; si el navegador no soporta WebGL muestra la foto fija. Se reconstruye en Blender desde la foto oficial; ver `tools/bottle-3d/README.md`.
+
 La plataforma no incluye ni incluirá funciones de IA. Fuera de alcance por ahora: facturación electrónica (CFDI), publicación directa en redes y cobro en línea.
 
 ## Cómo funciona la seguridad
