@@ -32,6 +32,21 @@ function useIsApple(): boolean {
   );
 }
 
+const subscribeWide = (cb: () => void) => {
+  const mq = window.matchMedia('(min-width: 768px)');
+  mq.addEventListener('change', cb);
+  return () => mq.removeEventListener('change', cb);
+};
+
+/** True from the md breakpoint up: the big bottle lives in the page band, the small one in the top bar. */
+function useWide() {
+  return useSyncExternalStore(
+    subscribeWide,
+    () => window.matchMedia('(min-width: 768px)').matches,
+    () => false,
+  );
+}
+
 export function AppShell({
   children,
   initialCollapsed,
@@ -41,6 +56,7 @@ export function AppShell({
 }) {
   const user = useSession();
   const isApple = useIsApple();
+  const wide = useWide();
   const pathname = usePathname();
   const queryClient = useQueryClient();
   const [collapsed, setCollapsed] = useState(initialCollapsed);
@@ -154,7 +170,7 @@ export function AppShell({
                 <PeriodSelect />
               </Suspense>
             ) : null}
-            <BottleBadge className="h-[3.25rem] w-10 sm:w-11" />
+            {wide ? null : <BottleBadge className="h-[3.25rem] w-10" />}
             <div className="hidden sm:block">
               <Notifications />
             </div>
@@ -165,8 +181,13 @@ export function AppShell({
         <main
           id="contenido"
           tabIndex={-1}
-          className="mx-auto w-full max-w-[96rem] flex-1 px-4 py-8 outline-none sm:px-8 lg:py-10"
+          className="relative mx-auto w-full max-w-[96rem] flex-1 px-4 py-8 outline-none sm:px-8 lg:py-10"
         >
+          {wide ? (
+            <div className="pointer-events-none absolute right-8 top-0 z-10 hidden md:block">
+              <BottleBadge className="pointer-events-auto h-[8.75rem] w-28 cursor-grab active:cursor-grabbing" />
+            </div>
+          ) : null}
           {children}
         </main>
       </div>

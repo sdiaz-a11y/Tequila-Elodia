@@ -1,14 +1,35 @@
 'use client';
 
-import { Canvas } from '@react-three/fiber';
+import { useRef } from 'react';
+import { Canvas, useFrame } from '@react-three/fiber';
+import type { Group } from 'three';
 import { Environment, Lightformer, OrbitControls, useGLTF } from '@react-three/drei';
 
 export const BOTTLE_MODEL = '/brand/elodia-botella-3d.glb';
 
 function Bottle() {
   const { scene } = useGLTF(BOTTLE_MODEL);
-  // The model is 1 unit tall, standing on y = 0; centre it so it turns about its own axis.
-  return <primitive object={scene} position={[0, -0.5, 0]} />;
+  const spin = useRef<Group>(null);
+  const speed = useRef(0);
+  useFrame((_, delta) => {
+    if (!spin.current || Math.abs(speed.current) < 0.01) return;
+    spin.current.rotation.y += speed.current * delta;
+    speed.current *= Math.exp(-2.4 * delta); // glides to a stop
+  });
+  return (
+    <group
+      ref={spin}
+      onClick={(e) => {
+        // a click, not the end of a drag: kick it into a full turn or two
+        if (e.delta < 5) speed.current = 11;
+      }}
+      onPointerOver={() => (document.body.style.cursor = 'pointer')}
+      onPointerOut={() => (document.body.style.cursor = '')}
+    >
+      {/* The model is 1 unit tall, standing on y = 0; centre it so it turns about its own axis. */}
+      <primitive object={scene} position={[0, -0.5, 0]} />
+    </group>
+  );
 }
 
 /** Studio reflections built in code (no HDR download): softboxes left and right, a warm top light and a gold rim. */
