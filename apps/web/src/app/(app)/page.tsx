@@ -11,11 +11,17 @@ import {
   TriangleAlert,
 } from 'lucide-react';
 import { StarDivider } from '@/components/brand/star-divider';
+import {
+  DashboardOverview,
+  type FinanceOverview,
+  type InventoryOverview,
+} from '@/components/dashboard/overview';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { dayInDays, formatDateTime, formatMoney, isOverdue } from '@/lib/format';
-import { canRead } from '@/lib/roles';
+import { monthKey, parseMonth, shiftMonth } from '@/lib/calendar';
+import { canFinance, canRead } from '@/lib/roles';
 import { getSessionUser } from '@/lib/session';
 import { createSupabase } from '@/lib/supabase/server';
 import { formatLongDate, greetingFor } from '@/lib/utils';
@@ -134,6 +140,11 @@ export default async function DashboardPage() {
     };
   }
 
+  const [finance, inventory] = await Promise.all([
+    canFinance(user) ? loadFinance() : null,
+    canRead(user) ? loadInventory() : null,
+  ]);
+
   const nothingYet =
     stats && stats.prospects + stats.clients + stats.distributors + stats.openCount === 0;
   const maxStage = Math.max(1, ...(stats?.stages.map((s) => s.n) ?? [1]));
@@ -147,6 +158,8 @@ export default async function DashboardPage() {
         <StarDivider className="w-48" />
         <p className="text-sm text-muted first-letter:uppercase">{formatLongDate()}</p>
       </header>
+
+      <DashboardOverview finance={finance} inventory={inventory} />
 
       {!stats ? (
         <Card>
@@ -220,7 +233,7 @@ export default async function DashboardPage() {
               <EmptyState
                 icon={Handshake}
                 title="Empieza registrando tu primera empresa"
-                description="Cuando captures empresas, oportunidades y actividades, sus cifras aparecerán aquí. ELODIA OS no muestra datos de ejemplo."
+                description="Cuando captures empresas, oportunidades y actividades, sus cifras aparecerán aquí. La plataforma no muestra datos de ejemplo."
                 action={
                   <Link
                     href="/empresas"
@@ -317,6 +330,107 @@ export default async function DashboardPage() {
       )}
     </div>
   );
+}
+
+/** All-time and monthly totals from Finanzas, plus the last six months, in Mexico City's calendar. */
+async function loadFinance(): Promise<FinanceOverview> {
+  const supabase = await createSupabase();
+  const { data } = await supabase
+    .from('transactions')
+    .select('kind,amount,occurred_on')
+    .limit(50000);
+  const rows = (data ?? []).map((r) => ({
+    kind: r.kind as string,
+    amount: Number(r.amount),
+    month: String(r.occurred_on).slice(0, 7),
+  }));
+  const total = (kind: string, month?: string) =>
+    rows
+      .filter((r) => r.kind === kind && (!month || r.month === month))
+      .reduce((t, r) => t + r.amount, 0);
+  const now = parseMonth(null);
+  const thisMonth = monthKey(now.year, now.month);
+  const prev = shiftMonth(now.year, now.month, -1);
+  const prevKey = monthKey(prev.year, prev.month);
+  const label = (y: number, m: number, style: 'short' | 'long') =>
+    new Intl.DateTimeFormat('es-MX', { month: style, timeZone: 'UTC' }).format(
+      new Date(Date.UTC(y, m - 1, 1)),
+    ) + (style === 'long' ? ` ${y}` : '');
+  const series = Array.from({ length: 6 }, (_, i) => {
+    const { year, month } = shiftMonth(now.year, now.month, i - 5);
+    const key = monthKey(year, month);
+    return {
+      label: label(year, month, 'short').replace('.', ''),
+      income: total('income', key),
+      expense: total('expense', key),
+    };
+  });
+  return {
+    totalIncome: total('income'),
+    totalExpense: total('expense'),
+    monthIncome: total('income', thisMonth),
+    monthExpense: total('expense', thisMonth),
+    prevMonthBalance: total('income', prevKey) - total('expense', prevKey),
+    monthLabel: label(now.year, now.month, 'long'),
+    series,
+  };
+}
+
+/** Stock per active presentation (summed over warehouses) and its value at cost when costs are set. */
+async function loadInventory(): Promise<InventoryOverview> {
+  const supabase = await createSupabase();
+  const [variantsRes, stockRes] = await Promise.all([
+    supabase
+      .from('product_variants')
+      .select('id,sku,presentation,min_stock,cost,product:products!product_id(name)')
+      .eq('status', 'active')
+      .limit(500),
+    supabase.from('inventory_stock').select('variant_id,on_hand,reserved,available').limit(5000),
+  ]);
+  const stock = (stockRes.data ?? []) as {
+    variant_id: string;
+    on_hand: number;
+    reserved: number;
+    available: number;
+  }[];
+  const variants = (variantsRes.data ?? []) as unknown as {
+    id: string;
+    sku: string;
+    presentation: string;
+    min_stock: number | null;
+    cost: number | null;
+    product: { name: string } | null;
+  }[];
+  let valueAtCost = 0;
+  let costed = false;
+  const items = variants.map((v) => {
+    const mine = stock.filter((s) => s.variant_id === v.id);
+    const sum = (k: 'on_hand' | 'reserved' | 'available') =>
+      mine.reduce((t, s) => t + Number(s[k]), 0);
+    if (v.cost !== null) {
+      costed = true;
+      valueAtCost += sum('on_hand') * Number(v.cost);
+    }
+    return {
+      label: `${v.product?.name ?? ''} · ${v.presentation}`.replace(/^ · /, ''),
+      onHand: sum('on_hand'),
+      reserved: sum('reserved'),
+      available: sum('available'),
+      minStock: v.min_stock === null ? null : Number(v.min_stock),
+    };
+  });
+  return {
+    available: items.reduce((t, i) => t + i.available, 0),
+    onHand: items.reduce((t, i) => t + i.onHand, 0),
+    reserved: items.reduce((t, i) => t + i.reserved, 0),
+    presentations: items.length,
+    low: items.filter((i) => i.minStock !== null && i.available < i.minStock).length,
+    valueAtCost: costed ? valueAtCost : null,
+    items: items
+      .sort((a, b) => b.available - a.available)
+      .slice(0, 6)
+      .map(({ label, available, minStock }) => ({ label, available, minStock })),
+  };
 }
 
 function Kpi({

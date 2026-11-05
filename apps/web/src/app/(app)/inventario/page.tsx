@@ -31,11 +31,30 @@ export default async function InventoryPage() {
     supabase
       .from('inventory_movements')
       .select(
-        'id,created_at,kind,qty,reason,variant:product_variants!variant_id(sku),warehouse:warehouses!warehouse_id(name),lot:inventory_lots!lot_id(lot_code)',
+        'id,created_at,kind,qty,reason,order_id,variant:product_variants!variant_id(sku),warehouse:warehouses!warehouse_id(name),lot:inventory_lots!lot_id(lot_code),author:profiles!created_by(name)',
       )
+      .is('corrects_id', null)
       .order('created_at', { ascending: false })
       .limit(25),
   ]);
+
+  // Corrections of the movements on screen, oldest first, to rebuild each one's timeline.
+  const shownIds = (movRes.data ?? []).map((m) => m.id as string);
+  const { data: corrData } = shownIds.length
+    ? await supabase
+        .from('inventory_movements')
+        .select('id,created_at,qty,reason,corrects_id,author:profiles!created_by(name)')
+        .in('corrects_id', shownIds)
+        .order('created_at', { ascending: true })
+    : { data: [] };
+  const corrections = (corrData ?? []) as unknown as {
+    id: string;
+    created_at: string;
+    qty: number;
+    reason: string | null;
+    corrects_id: string;
+    author: { name: string } | null;
+  }[];
 
   const whName = new Map((whRes.data ?? []).map((w) => [w.id as string, w.name as string]));
   const rows = (stockRes.data ?? []) as {
@@ -83,21 +102,45 @@ export default async function InventoryPage() {
       kind: string;
       qty: number;
       reason: string | null;
+      order_id: string | null;
       variant: { sku: string } | null;
       warehouse: { name: string } | null;
       lot: { lot_code: string } | null;
+      author: { name: string } | null;
     }[]
-  ).map((m) => ({
-    id: m.id,
-    created_at: m.created_at,
-    kind: m.kind,
-    qty: Number(m.qty),
-    reason: m.reason,
-    sku: m.variant?.sku ?? '—',
-    warehouse: m.warehouse?.name ?? '—',
-    lot: m.lot?.lot_code ?? null,
-    who: null,
-  }));
+  ).map((m) => {
+    // Stock effect: an entry adds, an exit subtracts, an adjustment carries its own sign.
+    const shown = (effect: number) => (m.kind === 'out' ? -effect : effect);
+    let effect = m.kind === 'out' ? -Number(m.qty) : Number(m.qty);
+    const history = corrections
+      .filter((c) => c.corrects_id === m.id)
+      .map((c) => {
+        const from = shown(effect);
+        effect += Number(c.qty);
+        return {
+          id: c.id,
+          created_at: c.created_at,
+          reason: c.reason,
+          who: c.author?.name ?? null,
+          from,
+          to: shown(effect),
+        };
+      });
+    return {
+      id: m.id,
+      created_at: m.created_at,
+      kind: m.kind,
+      qty: shown(effect),
+      originalQty: Number(m.qty),
+      reason: m.reason,
+      sku: m.variant?.sku ?? '—',
+      warehouse: m.warehouse?.name ?? '—',
+      lot: m.lot?.lot_code ?? null,
+      who: m.author?.name ?? null,
+      editable: ['in', 'out', 'adjust'].includes(m.kind) && !m.order_id,
+      history,
+    };
+  });
 
   return (
     <div className="animate-fade-up grid grid-cols-[minmax(0,1fr)] gap-6">

@@ -6,12 +6,15 @@ import {
   ArrowDownToLine,
   ArrowUpFromLine,
   Boxes,
+  History,
+  Pencil,
   Plus,
   SlidersHorizontal,
   TriangleAlert,
 } from 'lucide-react';
+import { motion, useReducedMotion } from 'motion/react';
 import { toast } from 'sonner';
-import { recordMovement } from '@/app/actions/inventory';
+import { correctMovement, recordMovement } from '@/app/actions/inventory';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -32,16 +35,30 @@ export interface StockRow {
   available: number;
   byWarehouse: { name: string; onHand: number; reserved: number }[];
 }
+export interface MovementEdit {
+  id: string;
+  created_at: string;
+  reason: string | null;
+  who: string | null;
+  from: number;
+  to: number;
+}
 export interface MovementRow {
   id: string;
   created_at: string;
   kind: string;
+  /** Current quantity, after any corrections. */
   qty: number;
+  /** Quantity as first saved. */
+  originalQty: number;
   reason: string | null;
   sku: string;
   warehouse: string;
   lot: string | null;
   who: string | null;
+  /** Entries, exits and manual adjustments can be edited; order reservations cannot. */
+  editable: boolean;
+  history: MovementEdit[];
 }
 export interface Choice {
   value: string;
@@ -84,6 +101,45 @@ export function InventoryPanel({
 }) {
   const router = useRouter();
   const [open, setOpen] = useState<null | 'in' | 'out' | 'adjust'>(null);
+  const [editing, setEditing] = useState<MovementRow | null>(null);
+  const [viewing, setViewing] = useState<MovementRow | null>(null);
+
+  const qtyCell = (m: MovementRow) => (
+    <span className="inline-flex items-baseline gap-2">
+      {m.history.length ? (
+        <span className="tabular text-xs text-faint line-through">{n(m.originalQty)}</span>
+      ) : null}
+      <span className="tabular font-medium text-fg">{n(m.qty)}</span>
+    </span>
+  );
+
+  const actions = (m: MovementRow) => (
+    <span className="flex items-center justify-end gap-1">
+      {m.history.length ? (
+        <Badge tone="gold" className="mr-1">
+          Editado
+        </Badge>
+      ) : null}
+      <Button
+        variant="ghost"
+        size="icon"
+        aria-label={`Historial del movimiento ${m.sku}`}
+        onClick={() => setViewing(m)}
+      >
+        <History aria-hidden />
+      </Button>
+      {canEdit && m.editable ? (
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={`Editar el movimiento ${m.sku}`}
+          onClick={() => setEditing(m)}
+        >
+          <Pencil aria-hidden />
+        </Button>
+      ) : null}
+    </span>
+  );
 
   return (
     <div className="grid grid-cols-[minmax(0,1fr)] gap-6">
@@ -200,7 +256,8 @@ export function InventoryPanel({
         <CardHeader className="pb-4">
           <CardTitle>Últimos movimientos</CardTitle>
           <CardDescription>
-            El libro solo se agrega: una corrección es un nuevo ajuste con su motivo.
+            Puedes editar una entrada, salida o ajuste: el cambio queda en su historial con quién,
+            cuándo y por qué.
           </CardDescription>
         </CardHeader>
         {movements.length === 0 ? (
@@ -221,6 +278,9 @@ export function InventoryPanel({
                     <TH>Almacén</TH>
                     <TH className="text-right">Cantidad</TH>
                     <TH>Motivo</TH>
+                    <TH className="w-36">
+                      <span className="sr-only">Acciones</span>
+                    </TH>
                   </tr>
                 </THead>
                 <tbody>
@@ -236,8 +296,9 @@ export function InventoryPanel({
                       </TD>
                       <TD>{m.sku}</TD>
                       <TD className="text-muted">{m.warehouse}</TD>
-                      <TD className="tabular text-right">{n(m.qty)}</TD>
+                      <TD className="text-right">{qtyCell(m)}</TD>
                       <TD className="text-muted">{m.reason ?? '—'}</TD>
+                      <TD>{actions(m)}</TD>
                     </TR>
                   ))}
                 </tbody>
@@ -245,20 +306,23 @@ export function InventoryPanel({
             </TableWrap>
             <ul className="grid divide-y divide-line md:hidden" aria-label="Últimos movimientos">
               {movements.map((m) => (
-                <li key={m.id} className="flex items-start justify-between gap-3 px-5 py-3.5">
-                  <div className="grid gap-0.5">
-                    <span className="flex items-center gap-2 text-sm text-fg">
-                      <Badge tone={KIND_TONE[m.kind] ?? 'neutral'}>
-                        {KIND_LABEL[m.kind] ?? m.kind}
-                      </Badge>
-                      {m.sku}
-                    </span>
-                    <span className="text-xs text-muted">
-                      {formatDateTime(m.created_at)} · {m.warehouse}
-                      {m.reason ? ` · ${m.reason}` : ''}
-                    </span>
+                <li key={m.id} className="grid gap-2 px-5 py-3.5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="grid min-w-0 gap-0.5">
+                      <span className="flex items-center gap-2 text-sm text-fg">
+                        <Badge tone={KIND_TONE[m.kind] ?? 'neutral'}>
+                          {KIND_LABEL[m.kind] ?? m.kind}
+                        </Badge>
+                        {m.sku}
+                      </span>
+                      <span className="text-xs text-muted">
+                        {formatDateTime(m.created_at)} · {m.warehouse}
+                        {m.reason ? ` · ${m.reason}` : ''}
+                      </span>
+                    </div>
+                    <span className="text-sm">{qtyCell(m)}</span>
                   </div>
-                  <span className="tabular text-sm font-medium text-fg">{n(m.qty)}</span>
+                  {actions(m)}
                 </li>
               ))}
             </ul>
@@ -280,7 +344,229 @@ export function InventoryPanel({
           }}
         />
       ) : null}
+
+      {editing ? (
+        <EditMovementDialog
+          movement={editing}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null);
+            toast.success('Movimiento editado; el cambio quedó en su historial');
+            router.refresh();
+          }}
+        />
+      ) : null}
+
+      {viewing ? (
+        <MovementTimeline
+          movement={viewing}
+          onClose={() => setViewing(null)}
+          onEdit={
+            canEdit && viewing.editable
+              ? () => {
+                  setEditing(viewing);
+                  setViewing(null);
+                }
+              : undefined
+          }
+        />
+      ) : null}
     </div>
+  );
+}
+
+function EditMovementDialog({
+  movement,
+  onClose,
+  onSaved,
+}: {
+  movement: MovementRow;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [qty, setQty] = useState(String(movement.qty));
+  const [reason, setReason] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const label = (KIND_LABEL[movement.kind] ?? movement.kind).toLowerCase();
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    setError(null);
+    const res = await correctMovement({ id: movement.id, qty, reason });
+    setSaving(false);
+    if (!res.ok) return setError(res.error ?? 'No se pudo editar.');
+    onSaved();
+  }
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && !saving && onClose()}>
+      <DialogContent className="top-[6vh] max-h-[88vh] w-[min(94vw,30rem)] overflow-y-auto">
+        <form onSubmit={(e) => void submit(e)} className="grid gap-5 p-6">
+          <div className="grid gap-1">
+            <DialogTitle className="text-base font-semibold text-fg">
+              Editar {label} · {movement.sku}
+            </DialogTitle>
+            <DialogDescription className="text-sm text-muted">
+              {formatDateTime(movement.created_at)} · {movement.warehouse}. Cantidad actual:{' '}
+              <span className="tabular text-fg">{n(movement.qty)}</span>. Las existencias se
+              recalculan solas.
+            </DialogDescription>
+          </div>
+          {error ? (
+            <p
+              role="alert"
+              className="rounded-control border border-danger/30 bg-danger/10 px-3.5 py-3 text-sm text-danger"
+            >
+              {error}
+            </p>
+          ) : null}
+          <Field
+            id="e-qty"
+            label="Cantidad correcta *"
+            hint={movement.kind === 'adjust' ? 'Negativo para restar.' : undefined}
+          >
+            {(a) => (
+              <Input
+                {...a}
+                type="number"
+                step="0.01"
+                inputMode="decimal"
+                value={qty}
+                onChange={(e) => setQty(e.target.value)}
+              />
+            )}
+          </Field>
+          <Field id="e-reason" label="Motivo del cambio *">
+            {(a) => (
+              <Input
+                {...a}
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                autoComplete="off"
+                placeholder="Ej. se capturaron 12 en lugar de 10"
+              />
+            )}
+          </Field>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="ghost" onClick={onClose} disabled={saving}>
+              Cancelar
+            </Button>
+            <Button type="submit" variant="primary" loading={saving}>
+              Guardar cambio
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** Vertical timeline: the movement as first saved, then every edit with who, when, from → to and why. */
+function MovementTimeline({
+  movement,
+  onClose,
+  onEdit,
+}: {
+  movement: MovementRow;
+  onClose: () => void;
+  onEdit?: () => void;
+}) {
+  const reduce = useReducedMotion();
+  const steps = [
+    {
+      key: movement.id,
+      title: `${KIND_LABEL[movement.kind] ?? movement.kind} registrada`,
+      detail: (
+        <>
+          Cantidad <span className="tabular text-fg">{n(movement.originalQty)}</span>
+        </>
+      ),
+      reason: movement.reason,
+      who: movement.who,
+      at: movement.created_at,
+      first: true,
+    },
+    ...movement.history.map((h) => ({
+      key: h.id,
+      title: 'Editado',
+      detail: (
+        <>
+          <span className="tabular text-faint line-through">{n(h.from)}</span>
+          <span aria-hidden> → </span>
+          <span className="sr-only"> cambió a </span>
+          <span className="tabular font-medium text-fg">{n(h.to)}</span>
+        </>
+      ),
+      reason: h.reason,
+      who: h.who,
+      at: h.created_at,
+      first: false,
+    })),
+  ];
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="top-[6vh] max-h-[88vh] w-[min(94vw,30rem)] overflow-y-auto">
+        <div className="grid gap-5 p-6">
+          <div className="grid gap-1">
+            <DialogTitle className="text-base font-semibold text-fg">
+              Historial · {movement.sku}
+            </DialogTitle>
+            <DialogDescription className="text-sm text-muted">
+              {movement.warehouse}
+              {movement.lot ? ` · lote ${movement.lot}` : ''} · cantidad vigente{' '}
+              <span className="tabular text-fg">{n(movement.qty)}</span>
+            </DialogDescription>
+          </div>
+          <ol className="relative grid gap-5 pl-7">
+            <span
+              aria-hidden
+              className="absolute bottom-2 left-[0.6875rem] top-2 w-px bg-gradient-to-b from-gold/70 via-line to-line"
+            />
+            {steps.map((s, i) => (
+              <motion.li
+                key={s.key}
+                className="relative grid gap-0.5"
+                initial={reduce ? false : { opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{
+                  duration: 0.32,
+                  delay: reduce ? 0 : 0.06 + i * 0.07,
+                  ease: [0.22, 1, 0.36, 1],
+                }}
+              >
+                <span
+                  aria-hidden
+                  className={`absolute -left-7 top-1 grid size-[1.375rem] place-items-center rounded-full border ${s.first ? 'border-gold/60 bg-gold/15 text-gold' : 'border-line-strong bg-surface-2 text-muted'}`}
+                >
+                  {s.first ? <Plus className="size-3" /> : <Pencil className="size-3" />}
+                </span>
+                <span className="text-sm font-medium text-fg">{s.title}</span>
+                <span className="text-sm text-muted">{s.detail}</span>
+                {s.reason ? <span className="text-sm text-muted">«{s.reason}»</span> : null}
+                <span className="text-xs text-faint">
+                  {formatDateTime(s.at)}
+                  {s.who ? ` · ${s.who}` : ''}
+                </span>
+              </motion.li>
+            ))}
+          </ol>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="ghost" onClick={onClose}>
+              Cerrar
+            </Button>
+            {onEdit ? (
+              <Button type="button" variant="primary" onClick={onEdit}>
+                <Pencil aria-hidden />
+                Editar
+              </Button>
+            ) : null}
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

@@ -10,7 +10,7 @@ Una sola aplicación Next.js (`apps/web`) con **Supabase** (inicio de sesión + 
 - **Contenido (sin IA)**: Brand Kit (paleta, tipografías, tono, mensajes y restricciones), biblioteca multimedia con archivos privados, calendario editorial y aprobaciones. Nada se publica sin revisión humana y, para aprobar, quien aprueba confirma la revisión de la normativa de publicidad de bebidas alcohólicas (la plataforma no valida ese cumplimiento).
 - **Ventas**: cotizaciones y pedidos con líneas que guardan el precio, descuento e IVA del momento (cambiar la lista de precios después no los altera), descuentos mayores a 10 % solo con gerencia, conversión de cotización aceptada a pedido en una sola transacción, pagos con saldo controlado e impresión / PDF.
 - **Operación**: proyectos, tablero de tareas, productos, presentaciones (SKU) con precio y costo, campañas con presupuesto y resultados.
-- **Inventario**: almacenes, lotes y un libro de movimientos que solo se agrega (entradas, salidas, ajustes con motivo, apartados). Nunca hay existencias negativas ni se saca lo apartado para un pedido. Con la automatización activa, confirmar un pedido aparta el inventario, enviarlo lo descuenta y cancelarlo lo libera; el envío guarda paquetería y guía.
+- **Inventario**: almacenes, lotes y un libro de movimientos que solo se agrega (entradas, salidas, ajustes con motivo, apartados). Un movimiento guardado se puede editar: el cambio queda como corrección ligada al original, con su historial (quién, cuándo, de cuánto a cuánto y por qué). Nunca hay existencias negativas ni se saca lo apartado para un pedido. Con la automatización activa, confirmar un pedido aparta el inventario, enviarlo lo descuenta y cancelarlo lo libera; el envío guarda paquetería y guía.
 - **Automatizaciones**: interruptores (todos apagados al inicio) para reservar inventario, y dar seguimiento a cotizaciones enviadas y a prospectos nuevos; cada una se ejecuta una sola vez por evento.
 - **Configuración**: etapas del pipeline editables.
 - **Cumplimiento**: documentos (permisos, certificados, contratos) con vencimiento y aprobación humana; el panel avisa de los que vencen en 30 días.
@@ -29,6 +29,8 @@ Una sola aplicación Next.js (`apps/web`) con **Supabase** (inicio de sesión + 
 
 - **Integraciones** (sin costo): botón «Escribir por WhatsApp» en empresas y contactos con teléfono; rastreo de guías DHL, FedEx y UPS en los pedidos; enlace privado para suscribir el calendario (actividades, tareas y publicaciones) en Google Calendar o iPhone; y envío de cotizaciones por correo con Resend, que queda apagado hasta definir `RESEND_API_KEY` y `EMAIL_FROM` (ver `.env.example`).
 
+- **Dashboard**: balance general destacado, balance del mes contra el mes anterior, ingresos y gastos de los últimos 6 meses e inventario disponible con alertas de mínimo (finanzas solo para quien tiene ese permiso).
+- **Respaldos**: `node scripts/db-backup.mjs` guarda tablas y archivos en `backups/` (fuera de git).
 - **Botella 3D**: modelo de la botella (GLB de ~0.9 MB) que gira en la barra superior, con fondo transparente, giro automático y arrastre manual; si el navegador no soporta WebGL muestra la foto fija. Se reconstruye en Blender desde la foto oficial; ver `tools/bottle-3d/README.md`.
 
 La plataforma no incluye ni incluirá funciones de IA. Fuera de alcance por ahora: facturación electrónica (CFDI), publicación directa en redes y cobro en línea.

@@ -16,9 +16,6 @@ export function Wordmark({
       <span className="font-display text-[1.625rem] font-semibold tracking-[0.32em] text-gold">
         {compact ? 'E' : 'ELODIA'}
       </span>
-      {compact ? null : (
-        <span className="text-[0.6875rem] font-medium tracking-[0.35em] text-faint">OS</span>
-      )}
     </span>
   );
 }

@@ -52,6 +52,17 @@ const so = await owner.auth.signInWithPassword({
 });
 if (so.error) throw so.error;
 
+// The platform holds real data: remember the owner's automation switches and default warehouse, and put
+// them back at the end no matter what (the inventory checks need their own default warehouse for a moment).
+const { data: autoSnapshot } = await admin.from('automation_settings').select('key,enabled');
+const { data: realDefault } = await admin
+  .from('warehouses')
+  .select('id')
+  .eq('is_default', true)
+  .not('name', 'like', 'rls-wh-%')
+  .maybeSingle();
+if (realDefault) await admin.from('warehouses').update({ is_default: false }).eq('id', realDefault.id);
+
 try {
   // Anonymous visitors see nothing.
   const anon = createClient(url, pub, { auth: { persistSession: false } });
@@ -238,6 +249,27 @@ try {
   t('an adjustment below zero is refused', !r.data?.length, r.error?.message);
   r = await opsC.from('inventory_movements').insert({ variant_id: variant.id, warehouse_id: wh.id, kind: 'in', qty: -3 }).select('id');
   t('a negative entry is refused', !r.data?.length, r.error?.code);
+  r = await sales.rpc('correct_inventory_movement', { p_id: mid, p_new_qty: 12, p_reason: 'rls prueba' });
+  t('a salesperson cannot edit a movement', !!r.error);
+  r = await opsC.rpc('correct_inventory_movement', { p_id: mid, p_new_qty: 12, p_reason: 'ok' });
+  t('editing a movement needs a reason', !!r.error);
+  r = await opsC.rpc('correct_inventory_movement', { p_id: mid, p_new_qty: 10, p_reason: 'rls prueba' });
+  t('editing to the same quantity is refused', !!r.error);
+  r = await opsC.rpc('correct_inventory_movement', { p_id: mid, p_new_qty: 12, p_reason: 'rls prueba' });
+  t('operations edits an entry from 10 to 12', !r.error && !!r.data, r.error?.message);
+  const corrId = r.data;
+  r = await opsC.from('inventory_stock').select('on_hand').eq('warehouse_id', wh.id).eq('variant_id', variant.id).single();
+  t('the edit moves the stock (12 on hand)', Number(r.data?.on_hand) === 12, JSON.stringify(r.data));
+  r = await admin.from('inventory_movements').select('qty,kind,corrects_id').eq('id', mid).single();
+  t('the original movement is kept as it was saved', Number(r.data?.qty) === 10 && r.data?.kind === 'in' && !r.data?.corrects_id);
+  r = await opsC.rpc('correct_inventory_movement', { p_id: corrId, p_new_qty: 5, p_reason: 'rls prueba' });
+  t('a correction cannot itself be edited', !!r.error);
+  r = await opsC.from('inventory_movements').insert({ variant_id: variant.id, warehouse_id: wh.id, kind: 'in', qty: 1, corrects_id: mid }).select('id');
+  t('a correction must be an adjustment', !r.data?.length);
+  r = await opsC.rpc('correct_inventory_movement', { p_id: mid, p_new_qty: 10, p_reason: 'rls regreso' });
+  t('editing it back to 10 keeps both edits in the history', !r.error, r.error?.message);
+  r = await admin.from('inventory_movements').select('id').eq('corrects_id', mid);
+  t('…two corrections linked to the original', r.data?.length === 2, String(r.data?.length));
   await admin.from('automation_settings').update({ enabled: true }).eq('key', 'reserve_on_confirm');
   const mkOrder = async (qty) => {
     const { data: o } = await admin.from('orders').insert({ account_id: acc.id }).select('id').single();
@@ -247,6 +279,11 @@ try {
   const o1 = await mkOrder(6);
   r = await sales.from('orders').update({ status: 'confirmed' }).eq('id', o1).select('id');
   t('confirming an order reserves its stock', !!r.data?.length, r.error?.message);
+  {
+    const { data: resv } = await admin.from('inventory_movements').select('id').eq('order_id', o1).eq('kind', 'reserve').maybeSingle();
+    const e = await opsC.rpc('correct_inventory_movement', { p_id: resv?.id, p_new_qty: 1, p_reason: 'rls prueba' });
+    t('an order reservation cannot be edited by hand', !!e.error);
+  }
   r = await sales.from('inventory_stock').select('on_hand,reserved,available').eq('warehouse_id', wh.id).eq('variant_id', variant.id).single();
   t('stock shows 10 on hand, 6 reserved, 4 available', Number(r.data?.on_hand) === 10 && Number(r.data?.reserved) === 6 && Number(r.data?.available) === 4, JSON.stringify(r.data));
   const o2 = await mkOrder(6);
@@ -293,6 +330,7 @@ try {
   await admin.from('accounts').delete().eq('id', pa.id);
   for (const o of [o1, o2, o3, o4]) await admin.from('orders').delete().eq('id', o);
   await admin.from('quotes').delete().eq('id', q2.id);
+  await admin.from('inventory_movements').delete().eq('warehouse_id', wh.id).not('corrects_id', 'is', null);
   await admin.from('inventory_movements').delete().eq('warehouse_id', wh.id);
   await admin.from('warehouses').delete().eq('id', wh.id);
   await admin.from('product_variants').delete().eq('id', variant.id);
@@ -381,10 +419,13 @@ try {
   }
 } finally {
   // Cleanup in dependency order, even after an interrupted run (the ledger blocks deleting what it references).
-  await admin.from('automation_settings').update({ enabled: false }).neq('key', '');
+  for (const a of autoSnapshot ?? []) await admin.from('automation_settings').update({ enabled: a.enabled }).eq('key', a.key);
   const { data: leftoverVariants } = await admin.from('product_variants').select('id').like('sku', 'RLS-%');
   const leftoverIds = (leftoverVariants ?? []).map((v) => v.id);
-  if (leftoverIds.length) await admin.from('inventory_movements').delete().in('variant_id', leftoverIds);
+  if (leftoverIds.length) {
+    await admin.from('inventory_movements').delete().in('variant_id', leftoverIds).not('corrects_id', 'is', null);
+    await admin.from('inventory_movements').delete().in('variant_id', leftoverIds);
+  }
   const { data: leftoverAccounts } = await admin.from('accounts').select('id').like('name', 'rls-%');
   const accountIds = (leftoverAccounts ?? []).map((a) => a.id);
   if (accountIds.length) {
@@ -398,6 +439,7 @@ try {
     await admin.from('activities').delete().in('account_id', accountIds);
   }
   await admin.from('warehouses').delete().like('name', 'rls-wh-%');
+  if (realDefault) await admin.from('warehouses').update({ is_default: true }).eq('id', realDefault.id);
   await admin.from('accounts').delete().eq('name', 'rls-sales');
   await admin.from('products').delete().eq('name', 'rls-prod');
   await admin.from('transactions').delete().eq('category', 'rls-test');

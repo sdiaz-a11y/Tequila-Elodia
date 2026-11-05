@@ -51,6 +51,34 @@ export async function recordMovement(input: unknown): Promise<InventoryResult> {
   return { ok: true };
 }
 
+const correctionSchema = z.object({
+  id: z.uuid(),
+  qty: z.coerce.number().min(-1e7).max(1e7),
+  reason: z.string().trim().min(3, 'Explica el motivo de la corrección').max(300),
+});
+
+/**
+ * "Edits" a saved movement: the database records the difference as a correction linked to the original,
+ * so the history (who, when, from how much to how much, why) is never lost.
+ */
+export async function correctMovement(input: unknown): Promise<InventoryResult> {
+  if (!(await getSessionUser()))
+    return { ok: false, error: 'Tu sesión expiró. Inicia sesión de nuevo.' };
+  const parsed = correctionSchema.safeParse(input);
+  if (!parsed.success)
+    return { ok: false, error: parsed.error.issues[0]?.message ?? 'Datos inválidos.' };
+  const supabase = await createSupabase();
+  const { error } = await supabase.rpc('correct_inventory_movement', {
+    p_id: parsed.data.id,
+    p_new_qty: parsed.data.qty,
+    p_reason: parsed.data.reason,
+  });
+  if (error) return { ok: false, error: explainDbError(error) };
+  revalidatePath('/inventario');
+  revalidatePath('/');
+  return { ok: true };
+}
+
 export async function setAutomation(key: string, enabled: boolean): Promise<InventoryResult> {
   const user = await getSessionUser();
   if (!user) return { ok: false, error: 'Tu sesión expiró. Inicia sesión de nuevo.' };
