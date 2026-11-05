@@ -13,3 +13,6 @@ coverage/
 .claude/
 
 *.tsbuildinfo
+
+# Respaldos de datos del negocio
+backups/
